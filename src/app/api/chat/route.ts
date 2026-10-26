@@ -27,37 +27,42 @@ function recortar(texto: string, max: number) {
  * cae a coincidencia simple por palabra.
  */
 async function buscarMaterial(consulta: string): Promise<{ titulo: string; tipo: string; fragmento: string }[]> {
-  try {
-    const { data, error } = await db.rpc("buscar_material", { consulta, limite: 6 });
-    if (!error && Array.isArray(data) && data.length) {
-      return data as { titulo: string; tipo: string; fragmento: string }[];
-    }
-  } catch {
-    /* sigue al respaldo */
-  }
-
   const palabras = consulta
     .toLowerCase()
     .split(/[^a-záéíóúñü0-9]+/)
-    .filter((p) => p.length > 4)
-    .slice(0, 6);
+    .filter((p) => p.length > 3)
+    .slice(0, 8);
 
   if (!palabras.length) return [];
 
+  const mapear = (data: unknown[]) =>
+    data.map((d) => {
+      const fila = d as { texto?: string; material?: { titulo?: string; tipo?: string } | null };
+      return {
+        titulo: fila.material?.titulo ?? "Material de la firma",
+        tipo: fila.material?.tipo ?? "documento",
+        fragmento: String(fila.texto ?? ""),
+      };
+    });
+
+  // Búsqueda en español con CUALQUIERA de las palabras (to_tsquery con |).
+  // No necesita funciones en la base: PostgREST arma la consulta.
+  const { data: porTexto, error } = await db
+    .from("material_fragmentos")
+    .select("texto, material:material_id(titulo, tipo)")
+    .textSearch("tsv", palabras.join(" | "), { config: "spanish", type: "raw" })
+    .limit(6);
+
+  if (!error && porTexto?.length) return mapear(porTexto);
+
+  // Respaldo: coincidencia simple, por si el texto no está stematizado.
   const { data } = await db
     .from("material_fragmentos")
     .select("texto, material:material_id(titulo, tipo)")
     .or(palabras.map((p) => `texto.ilike.%${p}%`).join(","))
     .limit(6);
 
-  return (data ?? []).map((d) => {
-    const m = d.material as unknown as { titulo?: string; tipo?: string } | null;
-    return {
-      titulo: m?.titulo ?? "Material de la firma",
-      tipo: m?.tipo ?? "documento",
-      fragmento: String(d.texto ?? ""),
-    };
-  });
+  return mapear(data ?? []);
 }
 
 export async function POST(req: Request) {
