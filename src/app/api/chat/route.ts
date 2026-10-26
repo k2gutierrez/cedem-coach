@@ -21,6 +21,45 @@ function recortar(texto: string, max: number) {
   return texto.length > max ? `${texto.slice(0, max)}…` : texto;
 }
 
+/**
+ * Busca fragmentos del material. Primero usa la búsqueda en español de Postgres;
+ * si no hay resultados (preguntas largas, o la función aún no está actualizada),
+ * cae a coincidencia simple por palabra.
+ */
+async function buscarMaterial(consulta: string): Promise<{ titulo: string; tipo: string; fragmento: string }[]> {
+  try {
+    const { data, error } = await db.rpc("buscar_material", { consulta, limite: 6 });
+    if (!error && Array.isArray(data) && data.length) {
+      return data as { titulo: string; tipo: string; fragmento: string }[];
+    }
+  } catch {
+    /* sigue al respaldo */
+  }
+
+  const palabras = consulta
+    .toLowerCase()
+    .split(/[^a-záéíóúñü0-9]+/)
+    .filter((p) => p.length > 4)
+    .slice(0, 6);
+
+  if (!palabras.length) return [];
+
+  const { data } = await db
+    .from("material_fragmentos")
+    .select("texto, material:material_id(titulo, tipo)")
+    .or(palabras.map((p) => `texto.ilike.%${p}%`).join(","))
+    .limit(6);
+
+  return (data ?? []).map((d) => {
+    const m = d.material as unknown as { titulo?: string; tipo?: string } | null;
+    return {
+      titulo: m?.titulo ?? "Material de la firma",
+      tipo: m?.tipo ?? "documento",
+      fragmento: String(d.texto ?? ""),
+    };
+  });
+}
+
 export async function POST(req: Request) {
   const usuario = await usuarioActual();
   if (!usuario) return NextResponse.json({ error: "sin_sesion" }, { status: 401 });
@@ -48,12 +87,7 @@ export async function POST(req: Request) {
   const [{ data: alumnos }, { data: sesiones }] = await Promise.all([consultaAlumnos, consultaSesiones]);
 
   let material: { titulo: string; tipo: string; fragmento: string }[] = [];
-  try {
-    const { data } = await db.rpc("buscar_material", { consulta: ultima, limite: 6 });
-    material = (data as typeof material) ?? [];
-  } catch {
-    material = [];
-  }
+  material = await buscarMaterial(ultima);
 
   const contexto = [
     `COACH: ${usuario.nombre} (${usuario.rol})`,
