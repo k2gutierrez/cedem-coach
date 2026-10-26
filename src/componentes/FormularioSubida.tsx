@@ -149,7 +149,7 @@ export default function FormularioSubida({
 
   const terminar = (id?: string) => {
     setFase("listo");
-    toast.success("Sesión analizada y guardada");
+    toast.success("Sesión guardada. El agente la está analizando…");
     if (id) router.push(`/alumnos/${id}?nueva=1`);
   };
 

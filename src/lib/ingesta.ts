@@ -6,8 +6,13 @@ import type { Usuario } from "./sesion";
 
 export const LIMITE_BYTES = 50 * 1024 * 1024; // 50 MB: lo que acepta el bucket
 
-/** Convierte el archivo en sesión analizada y la guarda. Devuelve el id del alumno. */
-export async function procesarSesion({
+type Fallo = { ok: false; error: string; codigo?: string };
+
+/**
+ * Paso 1: convierte el archivo en texto y guarda la sesión. Sin IA, para que
+ * la función del servidor no se acerque al tiempo máximo.
+ */
+export async function guardarArchivo({
   usuario,
   alumnoId,
   fecha,
@@ -17,21 +22,16 @@ export async function procesarSesion({
   alumnoId: string;
   fecha: string;
   archivo: File;
-}): Promise<{ ok: true; alumnoId: string } | { ok: false; error: string; codigo?: string }> {
+}): Promise<{ ok: true; sesionId: string; alumnoId: string; caracteres: number } | Fallo> {
   if (!alumnoId) return { ok: false, error: "Elige el alumno.", codigo: "sin_alumno" };
   if (!archivo || archivo.size === 0) return { ok: false, error: "Elige el archivo de la sesión.", codigo: "sin_archivo" };
   if (archivo.size > LIMITE_BYTES) {
-    return {
-      ok: false,
-      codigo: "archivo_muy_grande",
-      error:
-        "El archivo pasa de 50 MB. Exporta el audio en calidad media o sube la transcripción en texto.",
-    };
+    return { ok: false, codigo: "archivo_muy_grande", error: "El archivo pasa de 50 MB." };
   }
 
   const { data: alumno } = await db
     .from("alumnos")
-    .select("id, nombre, empresa, reto, etapa, coach_id")
+    .select("id, nombre, coach_id")
     .eq("id", alumnoId)
     .maybeSingle();
 
@@ -49,19 +49,6 @@ export async function procesarSesion({
     return { ok: false, error: `No se pudo leer el archivo: ${(e as Error).message}`, codigo: "lectura" };
   }
 
-  let analisis;
-  try {
-    const tareas = await tareasDelMes();
-    analisis = await analizarSesion({
-      transcripcion: leido.texto,
-      alumno,
-      tareas: tareas.map((t) => ({ id: t.id, titulo: t.titulo })),
-    });
-  } catch (e) {
-    if (e instanceof ErrorIngesta) return { ok: false, error: e.message, codigo: e.codigo };
-    return { ok: false, error: `El agente no pudo analizar la sesión: ${(e as Error).message}`, codigo: "analisis" };
-  }
-
   const datos = {
     coach_id: usuario.id,
     alumno_id: alumnoId,
@@ -70,8 +57,6 @@ export async function procesarSesion({
     titulo: `Sesión con ${alumno.nombre}`,
     estado: "realizada",
     transcripcion: leido.texto,
-    resumen_ejecutivo: analisis.resumen,
-    nota_coach: analisis.nota,
     entrada_tipo: leido.tipo,
   };
 
@@ -84,20 +69,74 @@ export async function procesarSesion({
     .limit(1)
     .maybeSingle();
 
-  let sesionId: string;
-
   if (previa?.id) {
-    sesionId = previa.id;
-    const { error } = await db.from("sesiones").update(datos).eq("id", sesionId);
+    const { error } = await db.from("sesiones").update(datos).eq("id", previa.id);
     if (error) return { ok: false, error: `No se pudo guardar: ${error.message}`, codigo: "guardado" };
-    await db.from("hallazgos").delete().eq("sesion_id", sesionId);
-    await db.from("compromisos").delete().eq("sesion_id", sesionId);
-    await db.from("tarea_sesion").delete().eq("sesion_id", sesionId);
-  } else {
-    const { data: creada, error } = await db.from("sesiones").insert(datos).select("id").single();
-    if (error || !creada) return { ok: false, error: `No se pudo guardar: ${error?.message}`, codigo: "guardado" };
-    sesionId = creada.id;
+    return { ok: true, sesionId: previa.id, alumnoId, caracteres: leido.caracteres };
   }
+
+  const { data: creada, error } = await db.from("sesiones").insert(datos).select("id").single();
+  if (error || !creada) return { ok: false, error: `No se pudo guardar: ${error?.message}`, codigo: "guardado" };
+
+  return { ok: true, sesionId: creada.id, alumnoId, caracteres: leido.caracteres };
+}
+
+/**
+ * Paso 2: analiza una sesión ya guardada. Es la parte lenta (IA), así que va en
+ * su propia petición para no arrastrar a la subida.
+ */
+export async function analizarGuardada({
+  usuario,
+  sesionId,
+}: {
+  usuario: Usuario;
+  sesionId: string;
+}): Promise<{ ok: true; sesionId: string; alumnoId: string | null; resumen: string } | Fallo> {
+  const { data: sesion } = await db
+    .from("sesiones")
+    .select("id, coach_id, alumno_id, fecha, transcripcion, resumen_ejecutivo, alumnos(id, nombre, empresa, reto, etapa)")
+    .eq("id", sesionId)
+    .maybeSingle();
+
+  if (!sesion) return { ok: false, error: "Esa sesión no existe.", codigo: "no_existe" };
+  if (usuario.rol !== "admin" && sesion.coach_id !== usuario.id) {
+    return { ok: false, error: "Esa sesión no es tuya.", codigo: "sin_permiso" };
+  }
+  if (!sesion.transcripcion) {
+    return { ok: false, error: "La sesión no tiene texto que analizar.", codigo: "sin_texto" };
+  }
+  if (sesion.resumen_ejecutivo) {
+    return { ok: true, sesionId, alumnoId: sesion.alumno_id, resumen: sesion.resumen_ejecutivo };
+  }
+
+  const alumno = (sesion.alumnos as unknown as {
+    nombre: string;
+    empresa: string | null;
+    reto: string | null;
+    etapa: string | null;
+  } | null) ?? { nombre: "Alumno", empresa: null, reto: null, etapa: null };
+
+  let analisis;
+  try {
+    const tareas = await tareasDelMes();
+    analisis = await analizarSesion({
+      transcripcion: sesion.transcripcion,
+      alumno,
+      tareas: tareas.map((t) => ({ id: t.id, titulo: t.titulo })),
+    });
+  } catch (e) {
+    if (e instanceof ErrorIngesta) return { ok: false, error: e.message, codigo: e.codigo };
+    return { ok: false, error: `El agente no pudo analizar: ${(e as Error).message}`, codigo: "analisis" };
+  }
+
+  await db
+    .from("sesiones")
+    .update({ resumen_ejecutivo: analisis.resumen, nota_coach: analisis.nota })
+    .eq("id", sesionId);
+
+  await db.from("hallazgos").delete().eq("sesion_id", sesionId);
+  await db.from("compromisos").delete().eq("sesion_id", sesionId);
+  await db.from("tarea_sesion").delete().eq("sesion_id", sesionId);
 
   if (analisis.hallazgos.length) {
     await db.from("hallazgos").insert(
@@ -114,7 +153,7 @@ export async function procesarSesion({
     await db.from("compromisos").insert(
       analisis.compromisos.map((c) => ({
         sesion_id: sesionId,
-        alumno_id: alumnoId,
+        alumno_id: sesion.alumno_id,
         texto: c.texto,
         responsable: c.responsable ?? null,
         fecha: c.fecha ?? null,
@@ -135,5 +174,5 @@ export async function procesarSesion({
     );
   }
 
-  return { ok: true, alumnoId };
+  return { ok: true, sesionId, alumnoId: sesion.alumno_id, resumen: analisis.resumen };
 }

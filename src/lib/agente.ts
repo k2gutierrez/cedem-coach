@@ -119,6 +119,10 @@ ${transcripcion.slice(0, 8000)}
     throw new ErrorIngesta("analisis_json", "El agente devolvió algo ilegible. Intenta de nuevo.");
   }
 
+  if (!String(datos.resumen || "").trim() && !(datos.hallazgos || []).length) {
+    throw new ErrorIngesta("analisis_vacio", "El agente no devolvió un análisis. Intenta de nuevo.");
+  }
+
   const ids = new Set(tareas.map((t) => t.id));
 
   return {

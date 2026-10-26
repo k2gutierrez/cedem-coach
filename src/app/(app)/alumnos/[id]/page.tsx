@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AnalizadorPendiente from "@/componentes/AnalizadorPendiente";
 import FormularioAgenda from "@/componentes/FormularioAgenda";
 import { alumnoPorId, sesionesDe } from "@/lib/datos";
 import { usuarioDePagina } from "@/lib/sesion";
@@ -93,7 +94,11 @@ export default async function FichaAlumno({
                     </span>
                   </div>
 
-                  {s.resumen_ejecutivo && <p className="mt-3">{s.resumen_ejecutivo}</p>}
+                  {s.resumen_ejecutivo ? (
+                    <p className="mt-3">{s.resumen_ejecutivo}</p>
+                  ) : (
+                    <AnalizadorPendiente sesionId={s.id} />
+                  )}
 
                   {s.nota_coach && (
                     <div className="mt-3 rounded-xl bg-[var(--fondo)] p-4">

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { procesarSesion } from "@/lib/ingesta";
+import { guardarArchivo } from "@/lib/ingesta";
 import { usuarioActual } from "@/lib/sesion";
 import { db, BUCKET } from "@/lib/supabase";
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 const AUDIO = /\.(m4a|mp3|wav|mp4|aac|ogg|opus|aiff|flac)$/i;
-const PRESUPUESTO_AUDIO_MS = 26_000;
+const PRESUPUESTO_AUDIO_MS = 22_000;
 
 export async function POST(req: Request) {
   const usuario = await usuarioActual();
@@ -22,7 +22,6 @@ export async function POST(req: Request) {
     let rutaStorage: string | null = null;
 
     if (tipo.includes("application/json")) {
-      // El navegador ya subió el archivo a Storage y manda la ruta.
       const cuerpo = (await req.json()) as { ruta?: string; nombre?: string; alumnoId?: string; fecha?: string };
       alumnoId = String(cuerpo.alumnoId || "");
       fecha = String(cuerpo.fecha || fecha);
@@ -49,8 +48,7 @@ export async function POST(req: Request) {
     }
 
     const esAudio = AUDIO.test(archivo.name);
-
-    const trabajo = procesarSesion({ usuario, alumnoId, fecha, archivo });
+    const trabajo = guardarArchivo({ usuario, alumnoId, fecha, archivo });
 
     const resultado = esAudio
       ? await Promise.race([
@@ -63,7 +61,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "El audio es demasiado largo para procesarlo de una vez. Sube la transcripción de Zoom (.vtt), que tarda segundos.",
+            "El audio es demasiado largo para transcribirlo de una vez. Sube la transcripción de Zoom (.vtt o .txt), que tarda segundos.",
           codigo: "audio_largo",
         },
         { status: 408 }
@@ -74,7 +72,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: resultado.error, codigo: resultado.codigo }, { status: 400 });
     }
 
-    // Se procesó: el original ya no hace falta (solo se guarda el texto).
     if (rutaStorage) {
       await db.storage.from(BUCKET).remove([rutaStorage]).catch(() => {});
     }

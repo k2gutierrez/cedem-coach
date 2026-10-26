@@ -146,3 +146,14 @@ Por eso el modelo por defecto es el rápido. Aun así, una función SSR de Ampli
 ~30 segundos, así que **audio de más de ~7 minutos no se puede procesar en una sola llamada**:
 para eso hace falta un proveedor asíncrono con webhook (AssemblyAI, Deepgram) o un worker
 siempre encendido. La transcripción de Zoom en texto no tiene ese problema.
+
+### Subida en dos pasos (evita el 504)
+
+La subida y el análisis van en peticiones separadas, porque juntas se acercaban al tiempo
+máximo de Amplify:
+
+1. `POST /api/sesiones` — guarda el texto de la sesión (1-2 s).
+2. `POST /api/sesiones/analizar` — el agente la analiza (5-20 s), disparado desde la ficha
+   del alumno mientras se muestra "El agente está leyendo…".
+
+Si el análisis falla, la ficha ofrece **Reintentar análisis**; la transcripción ya está a salvo.
