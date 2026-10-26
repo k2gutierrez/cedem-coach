@@ -62,12 +62,14 @@ export default function Navegacion({
         </nav>
 
         <div className="order-2 ml-auto flex items-center gap-3 md:order-3">
-          <div className="hidden text-right sm:block">
+          <Link
+            href="/cuenta"
+            className="rounded-xl px-2 py-1 text-right no-underline hover:bg-[var(--fondo)]"
+            title="Mi cuenta"
+          >
             <div className="text-[0.95rem] font-semibold leading-tight">{nombre}</div>
-            <div className="text-[0.8rem] capitalize text-[var(--texto-suave)]">
-              {rol === "admin" ? "Administración" : "Coach"}
-            </div>
-          </div>
+            <div className="text-[0.8rem] font-semibold text-[var(--cian)]">Mi cuenta</div>
+          </Link>
           <button
             type="button"
             className="btn btn-suave"

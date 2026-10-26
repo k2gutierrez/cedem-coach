@@ -62,7 +62,14 @@ export default function FormularioAgenda({
 
         <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-[var(--texto-suave)]">
-            {zoom ? "Se usará la liga de Zoom que tienes registrada." : "No tienes liga de Zoom registrada."}
+            {zoom ? (
+            "Se usará la liga de Zoom que tienes registrada."
+          ) : (
+            <>
+              No tienes liga de Zoom registrada.{" "}
+              <a href="/cuenta" className="font-semibold underline">Agrégala aquí</a>.
+            </>
+          )}
           </p>
           <button type="submit" className="btn btn-suave" disabled={pendiente}>
             {pendiente ? "Agendando…" : "Agendar sesión"}

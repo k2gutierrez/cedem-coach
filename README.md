@@ -83,9 +83,9 @@ Solo hay dos roles: **coach** (ve a sus alumnos) y **admin** (ve todo, carga mat
 node scripts/crear-usuario.mjs --email tu@cedem.com.mx --nombre "Tu Nombre" \
   --rol admin --password "ClaveLarga123"
 
-# coach, con su liga fija de Zoom
+# coach (la liga de Zoom se agrega después, en "Mi cuenta")
 node scripts/crear-usuario.mjs --email ana@cedem.com.mx --nombre "Ana Lucía Robles" \
-  --rol coach --password "OtraClave123" --zoom "https://zoom.us/j/123456789"
+  --rol coach --password "OtraClave123"
 
 node scripts/crear-usuario.mjs --listar          # quién existe
 node scripts/crear-usuario.mjs --email x@y.mx --rol admin        # cambiar rol

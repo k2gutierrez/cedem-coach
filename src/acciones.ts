@@ -333,3 +333,41 @@ export async function agendarSesion(_prev: Estado, formData: FormData): Promise<
     return { error: "No se pudo agendar la sesión." };
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Mi cuenta: nombre, liga de Zoom y contraseña                        */
+/* ------------------------------------------------------------------ */
+
+export async function actualizarCuenta(_prev: Estado, formData: FormData): Promise<Estado> {
+  try {
+    const usuario = await exigirUsuario();
+    const nombre = String(formData.get("nombre") || "").trim();
+    const zoom = String(formData.get("zoom") || "").trim();
+    const clave = String(formData.get("password") || "");
+
+    if (nombre.length < 3) return { error: "Escribe tu nombre completo." };
+    if (zoom && !/^https?:\/\//i.test(zoom)) {
+      return { error: "La liga de Zoom debe empezar con https://" };
+    }
+    if (clave && clave.length < 8) {
+      return { error: "La contraseña nueva necesita 8 caracteres o más." };
+    }
+
+    const { error } = await db
+      .from("coaches")
+      .update({ nombre, zoom_url: zoom || null })
+      .eq("id", usuario.id);
+
+    if (error) return { error: `No se pudo guardar: ${error.message}` };
+
+    if (clave) {
+      const { error: errorClave } = await db.auth.admin.updateUserById(usuario.id, { password: clave });
+      if (errorClave) return { error: `No se pudo cambiar la contraseña: ${errorClave.message}` };
+    }
+
+    revalidatePath("/", "layout");
+    return { ok: clave ? "Datos y contraseña actualizados." : "Datos actualizados." };
+  } catch {
+    return { error: "No se pudo guardar. Intenta de nuevo." };
+  }
+}
