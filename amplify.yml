@@ -25,6 +25,7 @@ frontend:
         # la comprobación real viene en la línea siguiente.
         - env | grep -E "^(SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|DEEPSEEK_API_KEY|DEEPSEEK_MODELO_ANALISIS|DEEPSEEK_MODELO_CHAT|OPENAI_API_KEY|OPENAI_MODELO_AUDIO|OPENAI_MODELO_VISION)=" >> .env.production || true
         - 'test -n "$SUPABASE_URL" && test -n "$SUPABASE_SERVICE_ROLE_KEY" && test -n "$DEEPSEEK_API_KEY" || { echo "ERROR: faltan SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY o DEEPSEEK_API_KEY. Cárgalas en Hosting > Environment variables."; exit 1; }'
+        - npm run typecheck
         - npm run build
   artifacts:
     baseDirectory: .next

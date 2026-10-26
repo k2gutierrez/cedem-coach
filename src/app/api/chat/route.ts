@@ -50,7 +50,7 @@ async function buscarMaterial(consulta: string): Promise<{ titulo: string; tipo:
   const { data: porTexto, error } = await db
     .from("material_fragmentos")
     .select("texto, material:material_id(titulo, tipo)")
-    .textSearch("tsv", palabras.join(" | "), { config: "spanish", type: "raw" })
+    .textSearch("tsv", palabras.join(" or "), { config: "spanish", type: "websearch" })
     .limit(6);
 
   if (!error && porTexto?.length) return mapear(porTexto);
