@@ -19,6 +19,16 @@ const CIAN = rgb(0.055, 0.604, 0.839);
 const GRIS = rgb(0.33, 0.38, 0.48);
 const NEGRO = rgb(0.09, 0.13, 0.18);
 
+
+/** No repite la fecha si el texto ya la menciona. */
+function conFecha(texto: string, fecha?: string | null): string {
+  if (!fecha) return texto;
+  if (/(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|antes del|antes de|para el)/i.test(texto)) {
+    return texto;
+  }
+  return `${texto} — ${fechaBonita(fecha)}`;
+}
+
 function fechaBonita(iso: string) {
   const [a, m, d] = iso.split("-").map(Number);
   return new Date(a, m - 1, d).toLocaleDateString("es-MX", {
@@ -152,8 +162,7 @@ export async function minutaPDF({
   if (compromisos.length) {
     seccion("Compromisos");
     compromisos.forEach((c) => {
-      const fecha = c.fecha ? ` — ${fechaBonita(c.fecha)}` : "";
-      texto(`• ${c.texto}${fecha}`, { size: 10.5 });
+      texto(`• ${conFecha(c.texto, c.fecha)}`, { size: 10.5 });
       if (c.responsable) texto(`   ${c.responsable}`, { size: 9.5, color: GRIS });
     });
     y -= 8;
@@ -456,7 +465,7 @@ export async function minutaDOCX({
     for (const c of compromisos) {
       cuerpo.push(
         new Paragraph({
-          text: `${c.texto}${c.fecha ? ` — ${fechaBonita(c.fecha)}` : ""}`,
+          text: conFecha(c.texto, c.fecha),
           bullet: { level: 0 },
         })
       );

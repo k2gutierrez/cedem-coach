@@ -113,6 +113,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "El agente devolvió algo ilegible." }, { status: 500 });
   }
 
+  // Limpieza: el modelo a veces escribe frases en el campo de fecha.
+  ajustada.compromisos = (ajustada.compromisos ?? []).map((c) => ({
+    texto: String(c.texto ?? "").slice(0, 300),
+    ...(c.responsable ? { responsable: String(c.responsable).slice(0, 80) } : {}),
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(String(c.fecha ?? "")) ? String(c.fecha) : null,
+  }));
+
   const { error } = await db.from("sesiones").update({ minuta_ajustada: ajustada }).eq("id", id);
   if (error) return NextResponse.json({ error: `No se pudo guardar: ${error.message}` }, { status: 500 });
 
