@@ -74,4 +74,27 @@ El `.ics` no requiere OAuth: se descarga y se abre en el calendario del coach.
 - `sql/001-esquema.sql` — tablas del MVP (ya aplicado).
 - `sql/002-material.sql` — biblioteca de material y búsqueda en español (aplicado).
 
-Los usuarios se crean con el script de `CEDEM/coach-demo/scripts/crear-usuario.mjs`.
+## Usuarios
+
+Solo hay dos roles: **coach** (ve a sus alumnos) y **admin** (ve todo, carga material y tareas).
+
+```bash
+# admin
+node scripts/crear-usuario.mjs --email tu@cedem.com.mx --nombre "Tu Nombre" \
+  --rol admin --password "ClaveLarga123"
+
+# coach, con su liga fija de Zoom
+node scripts/crear-usuario.mjs --email ana@cedem.com.mx --nombre "Ana Lucía Robles" \
+  --rol coach --password "OtraClave123" --zoom "https://zoom.us/j/123456789"
+
+node scripts/crear-usuario.mjs --listar          # quién existe
+node scripts/crear-usuario.mjs --email x@y.mx --rol admin        # cambiar rol
+node scripts/crear-usuario.mjs --email x@y.mx --password "Nueva123"  # cambiar clave
+node scripts/crear-usuario.mjs --desactivar --email x@y.mx      # quitarle el acceso
+node scripts/crear-usuario.mjs --activar --email x@y.mx
+```
+
+Dos avisos del proyecto compartido con el sitio de CEDEM:
+
+- Cada cuenta nueva crea también una fila en `profiles` (la usa el sitio). Es normal.
+- **Borrar una cuenta falla** porque la auditoría del sitio es append-only. Para retirar a alguien se usa `--desactivar`, que le quita el acceso de inmediato.

@@ -59,11 +59,12 @@ export const usuarioActual = cache(async (): Promise<Usuario | null> => {
 
   const { data: perfil } = await db
     .from("coaches")
-    .select("id, nombre, email, rol, zoom_url")
+    .select("id, nombre, email, rol, zoom_url, activo")
     .eq("id", data.user.id)
     .maybeSingle();
 
-  return (perfil as Usuario | null) ?? null;
+  if (!perfil || perfil.activo === false) return null;
+  return (perfil as Usuario & { activo?: boolean }) ?? null;
 });
 
 /** Para páginas y acciones que exigen sesión. */
