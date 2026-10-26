@@ -72,6 +72,7 @@ El `.ics` no requiere OAuth: se descarga y se abre en el calendario del coach.
 ## Base de datos
 
 - `sql/001-esquema.sql` — tablas del MVP (ya aplicado).
-- `sql/002-material.sql` — biblioteca de material y búsqueda en español (**pendiente de correr**).
+- `sql/002-material.sql` — biblioteca de material y búsqueda en español (aplicado).
+- `sql/003-busqueda.sql` — corrige la búsqueda: busca por cualquiera de las palabras, no por todas (**pendiente**).
 
 Los usuarios se crean con el script de `CEDEM/coach-demo/scripts/crear-usuario.mjs`.
