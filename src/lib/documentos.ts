@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } from "docx";
 import PptxGenJS from "pptxgenjs";
+import { LOGO_BLANCO, LOGO_NAVY } from "./logo";
 
 export type Persona = { nombre: string; empresa?: string | null; cargo?: string | null; reto?: string | null };
 export type SesionDoc = {
@@ -93,19 +94,17 @@ export async function minutaPDF({
     }
   };
 
-  // Encabezado
+  // Encabezado con el logotipo de CEDEM
   pagina.drawRectangle({ x: 0, y: ALTO - 84, width: ANCHO, height: 84, color: AZUL });
-  pagina.drawText("CEDEM", { x: MARGEN, y: ALTO - 50, size: 20, font: negrita, color: rgb(1, 1, 1) });
-  pagina.drawText("CENTRO DE DUEÑEZ EMPRESARIA", {
-    x: MARGEN,
-    y: ALTO - 66,
-    size: 7.5,
-    font: normal,
-    color: rgb(0.78, 0.87, 0.96),
-  });
+
+  const logo = await pdf.embedPng(Buffer.from(LOGO_BLANCO, "base64"));
+  const altoLogo = 30;
+  const anchoLogo = (logo.width / logo.height) * altoLogo;
+  pagina.drawImage(logo, { x: MARGEN, y: ALTO - 54, width: anchoLogo, height: altoLogo });
+
   pagina.drawText("Minuta de coaching", {
     x: ANCHO - MARGEN - negrita.widthOfTextAtSize("Minuta de coaching", 12),
-    y: ALTO - 52,
+    y: ALTO - 46,
     size: 12,
     font: negrita,
     color: rgb(1, 1, 1),
@@ -195,6 +194,17 @@ export async function fichaDOCX({
     new Paragraph({ text: t, heading: HeadingLevel.HEADING_2, spacing: { before: 260, after: 100 } });
 
   const cuerpo: Paragraph[] = [
+    new Paragraph({
+      children: [
+        new ImageRun({
+          type: "png",
+          data: Buffer.from(LOGO_NAVY, "base64"),
+          transformation: { width: 150, height: (150 * 300) / 1061 },
+          altText: { title: "CEDEM", description: "Logotipo CEDEM", name: "cedem" },
+        }),
+      ],
+      spacing: { after: 220 },
+    }),
     new Paragraph({ text: alumno.nombre, heading: HeadingLevel.TITLE }),
     new Paragraph({
       children: [
@@ -274,6 +284,13 @@ export async function presentacionPPTX({
 
   const portada = pptx.addSlide();
   portada.background = { color: "0B2F6B" };
+  portada.addImage({
+    data: `image/png;base64,${LOGO_BLANCO}`,
+    x: 0.7,
+    y: 0.5,
+    w: 2.1,
+    h: (2.1 * 240) / 901,
+  });
   portada.addText("Junta técnica", {
     x: 0.7,
     y: 1.6,
@@ -302,6 +319,13 @@ export async function presentacionPPTX({
 
   for (const caso of casos.slice(0, 8)) {
     const slide = pptx.addSlide();
+    slide.addImage({
+      data: `image/png;base64,${LOGO_NAVY}`,
+      x: 8.65,
+      y: 4.92,
+      w: 1.0,
+      h: (1.0 * 300) / 1061,
+    });
     slide.addText(caso.alumno.nombre, {
       x: 0.6,
       y: 0.4,
