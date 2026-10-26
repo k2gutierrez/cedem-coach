@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { usuarioActual } from "@/lib/sesion";
-import { ajustarMinuta } from "@/lib/ajuste";
+import { tareasConCobertura } from "@/lib/datos";
 
 export const maxDuration = 60;
 
@@ -72,6 +72,41 @@ async function buscarMaterial(consulta: string): Promise<{ titulo: string; tipo:
   return mapear(data ?? []);
 }
 
+
+/** Normaliza para comparar: minúsculas y sin acentos. */
+function plano(t: string) {
+  return t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9ñ ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Detecta si el coach dijo que una tarea ya se hizo. Es determinista a propósito:
+ * no dependemos de que el modelo se acuerde de poner el marcador.
+ */
+function tareasQueSeHicieron(mensaje: string, tareas: { id: string; titulo: string }[]): string[] {
+  const texto = plano(mensaje);
+  const hayIntencion = /(ya (se )?(hizo|entrego|cumplio|termino|acabo|quedo|mando|envio)|marca(r)? como (hecha|completada|cumplida)|tarea (hecha|completada|cumplida)|ya la (hizo|entrego|cumplio))/.test(
+    texto
+  );
+  if (!hayIntencion) return [];
+
+  const encontradas: string[] = [];
+  for (const t of tareas) {
+    const palabras = plano(t.titulo)
+      .split(" ")
+      .filter((p) => p.length > 4);
+    if (!palabras.length) continue;
+    const coincidencias = palabras.filter((p) => texto.includes(p)).length;
+    if (coincidencias >= Math.min(2, palabras.length)) encontradas.push(t.id);
+  }
+  return encontradas;
+}
+
 export async function POST(req: Request) {
   const usuario = await usuarioActual();
   if (!usuario) return NextResponse.json({ error: "sin_sesion" }, { status: 401 });
@@ -125,6 +160,8 @@ export async function POST(req: Request) {
       : ["(sin resultados para esta pregunta)"]),
   ];
 
+  let tareasParaMarcar: string[] = [];
+
   // Memoria: lo que ya se habló con este alumno (o en el chat general).
   if (alumnoId) {
     const { data: previos } = await db
@@ -145,6 +182,17 @@ export async function POST(req: Request) {
 
     if (ultimaSesion) {
       lineas.push("", `SESIÓN MÁS RECIENTE DEL ALUMNO: ${ultimaSesion.fecha} (id ${ultimaSesion.id})`);
+    }
+
+    const tareas = await tareasConCobertura(alumnoId);
+    if (tareas.length) {
+      lineas.push("", "TAREAS DE APLICACIÓN (id: título — estado):");
+      for (const t of tareas.slice(0, 20)) {
+        lineas.push(`- ${t.id}: ${t.titulo} — ${t.abordada ? "marcada" : "pendiente"}`);
+      }
+      tareasParaMarcar = tareasQueSeHicieron(ultima, tareas).filter(
+        (id) => !tareas.find((t) => t.id === id)?.abordada
+      );
     }
 
     if (previos?.length) {
@@ -210,6 +258,13 @@ export async function POST(req: Request) {
             if (!linea) continue;
             const dato = linea.slice(6).trim();
             if (dato === "[DONE]") {
+              if (tareasParaMarcar.length) {
+                control.enqueue(
+                  codificador.encode(
+                    `\n${tareasParaMarcar.map((id) => `[[TAREA:${id}]]`).join("\n")}`
+                  )
+                );
+              }
               control.close();
               return;
             }

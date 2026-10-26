@@ -13,7 +13,11 @@ const SUGERENCIAS = [
   "¿Qué dice la metodología sobre el margen?",
 ];
 
-const limpiar = (t: string) => t.replace(/\[\[ACCION:[a-z]+\]\]/gi, "").trim();
+const RE_ACCION = /\[\[ACCION:[a-z-]+\]\]/gi;
+const RE_TAREA = /\[\[TAREA:([0-9a-fA-F-]{36})\]\]/g;
+
+const limpiar = (t: string) =>
+  t.replace(RE_ACCION, "").replace(RE_TAREA, "").replace(/[ \t]+$/gm, "").trim();
 
 export default function Chat({
   nombre,
@@ -70,6 +74,23 @@ export default function Chat({
           copia[copia.length - 1] = { rol: "assistant", texto: acumulado };
           return copia;
         });
+      }
+
+      const tareasMarcadas = [...acumulado.matchAll(RE_TAREA)].map((m) => m[1]);
+      if (tareasMarcadas.length && alumnoId) {
+        let marcadas = 0;
+        for (const tareaId of new Set(tareasMarcadas)) {
+          const r = await fetch("/api/tareas/marcar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tareaId, alumnoId, hecha: true }),
+          });
+          if (r.ok) marcadas += 1;
+        }
+        if (marcadas) {
+          toast.success(`${marcadas === 1 ? "Tarea marcada" : `${marcadas} tareas marcadas`} como hechas.`);
+          router.refresh();
+        }
       }
 
       if (/\[\[ACCION:minuta\]\]/i.test(acumulado) && sesionId) {
