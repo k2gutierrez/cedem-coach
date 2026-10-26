@@ -98,3 +98,16 @@ Dos avisos del proyecto compartido con el sitio de CEDEM:
 
 - Cada cuenta nueva crea también una fila en `profiles` (la usa el sitio). Es normal.
 - **Borrar una cuenta falla** porque la auditoría del sitio es append-only. Para retirar a alguien se usa `--desactivar`, que le quita el acceso de inmediato.
+
+## Calendario
+
+Hay dos formas de llevar las sesiones al calendario:
+
+1. **Una sesión suelta**: el botón *+ Calendario* descarga un `.ics`.
+2. **Suscripción (recomendada)**: en *Mi cuenta* cada coach copia su liga
+   `/api/calendario/feed/<id>?t=<token>` y la agrega en Google Calendar con
+   *Otros calendarios → + → Desde una URL*. Se actualiza sola y es de solo lectura.
+
+El token del feed es un HMAC del id del coach con `CALENDARIO_SECRETO` (o, si no
+está definida, la llave de servicio). Si se rota esa llave, las ligas cambian y
+hay que volver a suscribirse.

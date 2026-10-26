@@ -82,3 +82,55 @@ export function construirICS(evento: EventoCalendario): string {
     })
     .join("\r\n");
 }
+
+/** Varios eventos en un solo calendario: es lo que se suscribe Google Calendar. */
+export function construirCalendario(eventos: EventoCalendario[], nombreCalendario = "CEDEM · Sesiones"): string {
+  const ahora = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+  const bloques = eventos.map((evento) => {
+    const minutos = evento.duracionMin || 60;
+    const { inicio, fin } = sellos(evento.fecha, evento.hora, minutos);
+    const lineas = [
+      "BEGIN:VEVENT",
+      `UID:${evento.id}@cedem.com.mx`,
+      `DTSTAMP:${ahora}`,
+      `DTSTART:${inicio}`,
+      `DTEND:${fin}`,
+      `SUMMARY:${escapar(evento.titulo)}`,
+    ];
+    if (evento.descripcion) lineas.push(`DESCRIPTION:${escapar(evento.descripcion)}`);
+    if (evento.lugar) lineas.push(`LOCATION:${escapar(evento.lugar)}`);
+    if (evento.organizador) {
+      lineas.push(`ORGANIZER;CN=${escapar(evento.organizador.nombre)}:mailto:${evento.organizador.email}`);
+    }
+    lineas.push("STATUS:CONFIRMED", "END:VEVENT");
+    return lineas;
+  });
+
+  const todas = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//CEDEM//Coach//ES",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${escapar(nombreCalendario)}`,
+    "X-PUBLISHED-TTL:PT1H",
+    ...bloques.flat(),
+    "END:VCALENDAR",
+  ];
+
+  return todas
+    .flatMap((linea) => {
+      if (linea.length <= 73) return [linea];
+      const trozos: string[] = [];
+      let resto = linea;
+      trozos.push(resto.slice(0, 73));
+      resto = resto.slice(73);
+      while (resto.length) {
+        trozos.push(" " + resto.slice(0, 72));
+        resto = resto.slice(72);
+      }
+      return trozos;
+    })
+    .join("\r\n");
+}
