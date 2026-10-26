@@ -4,7 +4,7 @@ import { ErrorIngesta, extraer } from "./extraer";
 import { tareasDelMes } from "./datos";
 import type { Usuario } from "./sesion";
 
-export const LIMITE_BYTES = 5 * 1024 * 1024; // 5 MB: el límite práctico de una función SSR
+export const LIMITE_BYTES = 50 * 1024 * 1024; // 50 MB: lo que acepta el bucket
 
 /** Convierte el archivo en sesión analizada y la guarda. Devuelve el id del alumno. */
 export async function procesarSesion({
@@ -25,7 +25,7 @@ export async function procesarSesion({
       ok: false,
       codigo: "archivo_muy_grande",
       error:
-        "El archivo pasa de 5 MB. Sube la transcripción en texto (.vtt o .txt), que pesa muy poco, o exporta el audio en calidad media.",
+        "El archivo pasa de 50 MB. Exporta el audio en calidad media o sube la transcripción en texto.",
     };
   }
 

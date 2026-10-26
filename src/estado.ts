@@ -4,6 +4,6 @@ import { atom } from "jotai";
 export const archivoAtom = atom<{ nombre: string; bytes: number } | null>(null);
 
 /** En qué paso va la carga de una sesión. */
-export type Fase = "inicio" | "enviando" | "leyendo" | "analizando" | "listo";
+export type Fase = "inicio" | "enviando" | "subiendo" | "leyendo" | "analizando" | "listo";
 
 export const faseAtom = atom<Fase>("inicio");

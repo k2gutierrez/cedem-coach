@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { procesarSesion } from "@/lib/ingesta";
 import { usuarioActual } from "@/lib/sesion";
+import { db, BUCKET } from "@/lib/supabase";
 
 export const maxDuration = 60;
+
+const AUDIO = /\.(m4a|mp3|wav|mp4|aac|ogg|opus|aiff|flac)$/i;
+const PRESUPUESTO_AUDIO_MS = 26_000;
 
 export async function POST(req: Request) {
   const usuario = await usuarioActual();
@@ -11,22 +15,71 @@ export async function POST(req: Request) {
   }
 
   try {
-    const formulario = await req.formData();
-    const archivo = formulario.get("archivo");
-    const alumnoId = String(formulario.get("alumnoId") || "");
-    const fecha = String(formulario.get("fecha") || new Date().toISOString().slice(0, 10));
+    const tipo = req.headers.get("content-type") || "";
+    let archivo: File | null = null;
+    let alumnoId = "";
+    let fecha = new Date().toISOString().slice(0, 10);
+    let rutaStorage: string | null = null;
 
-    if (!(archivo instanceof File)) {
-      return NextResponse.json({ error: "No llegó el archivo. Intenta de nuevo." }, { status: 400 });
+    if (tipo.includes("application/json")) {
+      // El navegador ya subió el archivo a Storage y manda la ruta.
+      const cuerpo = (await req.json()) as { ruta?: string; nombre?: string; alumnoId?: string; fecha?: string };
+      alumnoId = String(cuerpo.alumnoId || "");
+      fecha = String(cuerpo.fecha || fecha);
+      rutaStorage = cuerpo.ruta || null;
+
+      if (!rutaStorage) return NextResponse.json({ error: "Falta el archivo." }, { status: 400 });
+
+      const { data: blob, error } = await db.storage.from(BUCKET).download(rutaStorage);
+      if (error || !blob) {
+        console.error("[sesiones] no se pudo bajar de Storage:", error);
+        return NextResponse.json({ error: "No se encontró el archivo subido." }, { status: 400 });
+      }
+      const nombre = cuerpo.nombre || rutaStorage.split("/").pop() || "archivo";
+      archivo = new File([blob], nombre, { type: blob.type || "application/octet-stream" });
+    } else {
+      const formulario = await req.formData();
+      const enviado = formulario.get("archivo");
+      if (!(enviado instanceof File)) {
+        return NextResponse.json({ error: "No llegó el archivo. Intenta de nuevo." }, { status: 400 });
+      }
+      archivo = enviado;
+      alumnoId = String(formulario.get("alumnoId") || "");
+      fecha = String(formulario.get("fecha") || fecha);
     }
 
-    const r = await procesarSesion({ usuario, alumnoId, fecha, archivo });
+    const esAudio = AUDIO.test(archivo.name);
 
-    if (!r.ok) {
-      return NextResponse.json({ error: r.error, codigo: r.codigo }, { status: 400 });
+    const trabajo = procesarSesion({ usuario, alumnoId, fecha, archivo });
+
+    const resultado = esAudio
+      ? await Promise.race([
+          trabajo,
+          new Promise<null>((resolver) => setTimeout(() => resolver(null), PRESUPUESTO_AUDIO_MS)),
+        ])
+      : await trabajo;
+
+    if (resultado === null) {
+      return NextResponse.json(
+        {
+          error:
+            "El audio es demasiado largo para procesarlo de una vez. Sube la transcripción de Zoom (.vtt), que tarda segundos.",
+          codigo: "audio_largo",
+        },
+        { status: 408 }
+      );
     }
 
-    return NextResponse.json(r);
+    if (!resultado.ok) {
+      return NextResponse.json({ error: resultado.error, codigo: resultado.codigo }, { status: 400 });
+    }
+
+    // Se procesó: el original ya no hace falta (solo se guarda el texto).
+    if (rutaStorage) {
+      await db.storage.from(BUCKET).remove([rutaStorage]).catch(() => {});
+    }
+
+    return NextResponse.json(resultado);
   } catch (e) {
     console.error("[subir sesión] fallo inesperado:", e);
     return NextResponse.json(

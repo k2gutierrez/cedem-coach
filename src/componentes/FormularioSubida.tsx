@@ -7,11 +7,30 @@ import { toast } from "sonner";
 import { archivoAtom, faseAtom } from "@/estado";
 
 const ACEPTA = ".pdf,.docx,.txt,.md,.vtt,.srt,audio/*,image/*,.m4a,.mp3,.wav,.mp4,.heic";
-const LIMITE = 5 * 1024 * 1024;
+const LIMITE = 50 * 1024 * 1024;
+const DIRECTO_DESDE = 4 * 1024 * 1024; // arriba de esto se sube a Storage
 
 function peso(bytes: number) {
   if (bytes > 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   return `${Math.round(bytes / 1024)} KB`;
+}
+
+function subirAStorage(url: string, file: File, progreso: (p: number) => void) {
+  return new Promise<void>((resolver, rechazar) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
+    xhr.setRequestHeader("x-upsert", "true");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) progreso(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolver();
+      else rechazar(new Error(`subida ${xhr.status}`));
+    };
+    xhr.onerror = () => rechazar(new Error("red"));
+    xhr.send(file);
+  });
 }
 
 export default function FormularioSubida({
@@ -24,6 +43,7 @@ export default function FormularioSubida({
   const router = useRouter();
   const [archivo, setArchivo] = useAtom(archivoAtom);
   const [fase, setFase] = useAtom(faseAtom);
+  const [avance, setAvance] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [encima, setEncima] = useState(false);
   const [alumnoId, setAlumnoId] = useState(alumnoInicial ?? "");
@@ -37,10 +57,9 @@ export default function FormularioSubida({
   const elegir = (file?: File | null) => {
     if (!file) return;
     setError(null);
+    setAvance(0);
     if (file.size > LIMITE) {
-      setError(
-        `"${file.name}" pesa ${peso(file.size)}. El máximo es 5 MB: sube la transcripción en texto (.vtt o .txt) que pesa muchísimo menos.`
-      );
+      setError(`"${file.name}" pesa ${peso(file.size)}. El máximo es 50 MB.`);
       setArchivo(null);
       return;
     }
@@ -53,49 +72,88 @@ export default function FormularioSubida({
     }
   };
 
+  const procesar = async (cuerpo: FormData | object, esJson: boolean) => {
+    const r = await fetch("/api/sesiones", {
+      method: "POST",
+      ...(esJson
+        ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) }
+        : { body: cuerpo as FormData }),
+    });
+    return { ok: r.ok, datos: (await r.json().catch(() => ({}))) as { error?: string; alumnoId?: string } };
+  };
+
   const enviar = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
-    const caja = entrada.current;
-    const file = caja?.files?.[0];
-    if (!alumnoId) {
-      setError("Elige el alumno.");
-      return;
-    }
-    if (!file) {
-      setError("Elige el archivo de la sesión.");
-      return;
-    }
-
-    setFase("enviando");
-    const datos = new FormData();
-    datos.set("alumnoId", alumnoId);
-    datos.set("fecha", fecha);
-    datos.set("archivo", file);
+    const file = entrada.current?.files?.[0];
+    if (!alumnoId) return setError("Elige el alumno.");
+    if (!file) return setError("Elige el archivo de la sesión.");
 
     try {
-      const r = await fetch("/api/sesiones", { method: "POST", body: datos });
-      const j = (await r.json().catch(() => ({}))) as { error?: string; alumnoId?: string };
+      if (file.size > DIRECTO_DESDE) {
+        // Archivo pesado: primero a Storage, luego se procesa.
+        setFase("subiendo");
+        setAvance(0);
 
-      if (!r.ok) {
-        setFase("inicio");
-        setError(j.error || `No se pudo subir (${r.status}).`);
-        toast.error("No se pudo subir la sesión");
-        return;
+        const firmaResp = await fetch("/api/subidas/firma", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: file.name, bytes: file.size, mime: file.type, alumnoId }),
+        });
+        const firma = (await firmaResp.json().catch(() => ({}))) as {
+          ruta?: string;
+          url?: string;
+          error?: string;
+        };
+        if (!firmaResp.ok || !firma.url || !firma.ruta) {
+          setFase("inicio");
+          return setError(firma.error || "No se pudo preparar la subida.");
+        }
+
+        await subirAStorage(firma.url, file, setAvance);
+        setFase("analizando");
+
+        const { ok, datos } = await procesar(
+          { ruta: firma.ruta, nombre: file.name, alumnoId, fecha },
+          true
+        );
+        if (!ok) {
+          setFase("inicio");
+          return setError(datos.error || "No se pudo procesar el archivo.");
+        }
+        return terminar(datos.alumnoId);
       }
 
-      setFase("listo");
-      toast.success("Sesión analizada y guardada");
-      router.push(`/alumnos/${j.alumnoId}?nueva=1`);
-    } catch {
+      setFase("analizando");
+      const datos = new FormData();
+      datos.set("alumnoId", alumnoId);
+      datos.set("fecha", fecha);
+      datos.set("archivo", file);
+
+      const { ok, datos: respuesta } = await procesar(datos, false);
+      if (!ok) {
+        setFase("inicio");
+        return setError(respuesta.error || "No se pudo procesar el archivo.");
+      }
+      terminar(respuesta.alumnoId);
+    } catch (err) {
       setFase("inicio");
-      setError("Se cortó la conexión antes de terminar. Revisa tu internet e intenta de nuevo.");
-      toast.error("Se cortó la conexión");
+      const mensaje = (err as Error).message === "red"
+        ? "Se cortó la conexión durante la subida. Intenta de nuevo."
+        : `No se pudo subir el archivo (${(err as Error).message}).`;
+      setError(mensaje);
+      toast.error("No se pudo subir la sesión");
     }
   };
 
-  const trabajando = fase === "enviando" || fase === "listo";
+  const terminar = (id?: string) => {
+    setFase("listo");
+    toast.success("Sesión analizada y guardada");
+    if (id) router.push(`/alumnos/${id}?nueva=1`);
+  };
+
+  const trabajando = fase === "enviando" || fase === "subiendo" || fase === "analizando" || fase === "listo";
 
   return (
     <form onSubmit={enviar} className="flex flex-col gap-5">
@@ -104,7 +162,6 @@ export default function FormularioSubida({
           <label htmlFor="alumnoId">¿De qué alumno es la sesión?</label>
           <select
             id="alumnoId"
-            name="alumnoId"
             value={alumnoId}
             onChange={(e) => setAlumnoId(e.target.value)}
             required
@@ -122,13 +179,7 @@ export default function FormularioSubida({
 
         <div className="campo">
           <label htmlFor="fecha">Fecha de la sesión</label>
-          <input
-            id="fecha"
-            name="fecha"
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-          />
+          <input id="fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
         </div>
       </div>
 
@@ -147,8 +198,8 @@ export default function FormularioSubida({
       >
         <div className="text-lg font-bold">Arrastra aquí el archivo de la sesión</div>
         <p className="mx-auto mt-1 max-w-xl text-sm text-[var(--texto-suave)]">
-          Sirve la transcripción de Zoom (.vtt o .txt), un PDF, un Word, el audio o una foto de tus
-          notas. Máximo 5 MB.
+          Transcripción de Zoom (.vtt o .txt), PDF, Word, audio o foto de tus notas. Hasta 50 MB: los
+          archivos grandes se suben directo y se procesan solos.
         </p>
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
@@ -164,8 +215,6 @@ export default function FormularioSubida({
 
         <input
           ref={entrada}
-          id="archivo"
-          name="archivo"
           type="file"
           accept={ACEPTA}
           hidden
@@ -185,19 +234,28 @@ export default function FormularioSubida({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--texto-suave)]">
-          El archivo se convierte a texto y el agente lo analiza. Puede tardar hasta un minuto.
+          {fase === "subiendo"
+            ? `Subiendo… ${avance}%`
+            : "El archivo se convierte a texto y el agente lo analiza."}
         </p>
         <button type="submit" className="btn btn-primario btn-grande" disabled={trabajando || !archivo}>
-          {trabajando ? "Leyendo y analizando…" : "Analizar la sesión"}
+          {fase === "subiendo"
+            ? `Subiendo ${avance}%`
+            : fase === "analizando"
+              ? "Analizando…"
+              : "Analizar la sesión"}
         </button>
       </div>
 
-      {trabajando && (
+      {(fase === "subiendo" || fase === "analizando") && (
         <div className="tarjeta" style={{ borderColor: "var(--cian)", background: "#f2fbff" }}>
-          <strong>El agente está leyendo la sesión…</strong>
+          <strong>
+            {fase === "subiendo" ? "Subiendo el archivo…" : "El agente está leyendo la sesión…"}
+          </strong>
           <p className="mt-1 text-sm text-[var(--texto-suave)]">
-            Buscando hallazgos, compromisos y qué tareas de aplicación se tocaron. No cierres esta
-            página.
+            {fase === "subiendo"
+              ? "Los archivos grandes tardan un poco más. No cierres esta página."
+              : "Buscando hallazgos, compromisos y qué tareas de aplicación se tocaron."}
           </p>
         </div>
       )}

@@ -123,3 +123,26 @@ el error real llega al usuario en vez de una página genérica.
   eso hace falta subir directo a Supabase Storage y procesar aparte.
 - El análisis usa `deepseek-flash` y recorta la transcripción a 8 000 caracteres para
   responder en menos de 10 segundos y no chocar con el tiempo máximo de la función.
+
+### Archivos pesados
+
+Los archivos de más de 4 MB no pasan por la función del servidor: el navegador pide una
+URL firmada (`POST /api/subidas/firma`), sube directo a Supabase Storage y luego el servidor
+lo procesa desde ahí (`POST /api/sesiones` con `{ruta}`). Límite: **50 MB**.
+
+El original se borra después de procesarlo: queda el texto, no el archivo.
+
+### Audios: el límite real es el tiempo
+
+Transcribir tarda. Medido con un audio de 69 segundos:
+
+| Modelo | Tiempo | ¿Distingue hablantes? |
+|---|---|---|
+| `gpt-4o-transcribe-diarize` | 30 s | Sí |
+| `whisper-1` | 6 s | No |
+| `gpt-4o-mini-transcribe` | 4 s | No |
+
+Por eso el modelo por defecto es el rápido. Aun así, una función SSR de Amplify corta a los
+~30 segundos, así que **audio de más de ~7 minutos no se puede procesar en una sola llamada**:
+para eso hace falta un proveedor asíncrono con webhook (AssemblyAI, Deepgram) o un worker
+siempre encendido. La transcripción de Zoom en texto no tiene ese problema.

@@ -96,7 +96,7 @@ async function transcribirAudio(buffer: Buffer, nombre: string, mime: string) {
   }
   const forma = new FormData();
   forma.append("file", new Blob([new Uint8Array(buffer)], { type: mime }), nombre);
-  forma.append("model", process.env.OPENAI_MODELO_AUDIO || "gpt-4o-transcribe-diarize");
+  forma.append("model", process.env.OPENAI_MODELO_AUDIO || "gpt-4o-mini-transcribe");
   forma.append("response_format", "diarized_json");
   forma.append("chunking_strategy", "auto");
 
