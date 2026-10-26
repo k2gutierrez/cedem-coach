@@ -1,26 +1,194 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --azul: #0b2f6b;
+  --azul-claro: #14539e;
+  --cian: #0e9ad6;
+  --fondo: #f4f6fb;
+  --superficie: #ffffff;
+  --texto: #16202f;
+  --texto-suave: #55617a;
+  --borde: #dde3ee;
+  --exito: #1a7f4b;
+  --error: #b42318;
+  --aviso: #8a5a00;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-size: 18px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* Foco muy visible: se navega con teclado y con vista cansada. */
+:focus-visible {
+  outline: 3px solid var(--cian);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: #cfe9f7;
+}
+
+/* ------------------------------------------------------------------ */
+/* Piezas compartidas                                                  */
+/* ------------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 56px;
+  padding: 0 22px;
+  border-radius: 14px;
+  font-size: 1.05rem;
+  font-weight: 650;
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    transform 0.05s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.btn-primario {
+  background: var(--azul);
+  color: #fff;
+}
+
+.btn-primario:hover {
+  background: var(--azul-claro);
+}
+
+.btn-suave {
+  background: #fff;
+  border-color: var(--borde);
+  color: var(--texto);
+}
+
+.btn-suave:hover {
+  border-color: var(--azul-claro);
+}
+
+.btn-grande {
+  min-height: 64px;
+  font-size: 1.15rem;
+  padding: 0 28px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.campo > label {
+  font-weight: 650;
+  font-size: 1rem;
+}
+
+.campo input,
+.campo select,
+.campo textarea {
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  font-size: 1.05rem;
+  font-family: inherit;
+  color: var(--texto);
+  background: #fff;
+  border: 2px solid var(--borde);
+  border-radius: 12px;
+}
+
+.campo textarea {
+  min-height: 140px;
+  line-height: 1.5;
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  border-color: var(--cian);
+  outline: none;
+}
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 18px;
+  padding: 22px;
+}
+
+.etiqueta {
+  display: inline-block;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.soltar {
+  border: 3px dashed var(--borde);
+  border-radius: 18px;
+  padding: 26px 18px;
+  text-align: center;
+  background: #fff;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.soltar.activo {
+  border-color: var(--cian);
+  background: #eef8fd;
+}
+
+/* Punto que late mientras el agente piensa */
+.pensando-punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--cian);
+  animation: latir 1s ease-in-out infinite;
+}
+
+@keyframes latir {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
 }

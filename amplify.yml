@@ -1,0 +1,36 @@
+# ============================================================================
+# CEDEM Coach · compilación en AWS Amplify Hosting (Next.js con servidor)
+#
+# Tres cosas que este archivo resuelve, aprendidas del despliegue de CEDEM 2.0:
+#
+#   1. Las variables del panel de Amplify se ven al COMPILAR pero no en el
+#      servidor que atiende cada visita. Por eso se vuelcan a `.env.production`
+#      antes de compilar (procedimiento oficial de AWS para SSR).
+#   2. Node se fija en `.nvmrc` (22), porque Amplify solo admite 16 a 22.
+#   3. El proyecto usa npm (package-lock.json), no pnpm: `npm ci` reproducible.
+#
+# Las llaves NO viven aquí: se cargan en Amplify → Hosting → Environment
+# variables. Este archivo solo las copia al build.
+# ============================================================================
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        # Vuelca las variables del panel al entorno de ejecución del servidor.
+        # `|| true` evita que el build muera si el grep no encuentra nada;
+        # la comprobación real viene en la línea siguiente.
+        - env | grep -E "^(SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|DEEPSEEK_API_KEY|DEEPSEEK_MODELO_ANALISIS|DEEPSEEK_MODELO_CHAT|OPENAI_API_KEY|OPENAI_MODELO_AUDIO|OPENAI_MODELO_VISION)=" >> .env.production || true
+        - 'test -n "$SUPABASE_URL" && test -n "$SUPABASE_SERVICE_ROLE_KEY" && test -n "$DEEPSEEK_API_KEY" || { echo "ERROR: faltan SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY o DEEPSEEK_API_KEY. Cárgalas en Hosting > Environment variables."; exit 1; }'
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*

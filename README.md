@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CEDEM Coach · aplicación (Next.js)
 
-## Getting Started
+Plataforma de coaches del Máster con Euncet. Dos roles: **coach** y **admin**.
 
-First, run the development server:
+## Correr
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev     # http://127.0.0.1:3100
+npm run build   # comprobación de producción
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Variables en `.env.local` (no se versiona):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+DEEPSEEK_API_KEY=
+OPENAI_API_KEY=          # audio e imágenes; sin ella el resto funciona
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Desplegar en AWS Amplify
 
-## Learn More
+El repositorio **es esta carpeta** (`CEDEM/coach`), no el workspace completo.
 
-To learn more about Next.js, take a look at the following resources:
+1. Sube el repo a GitHub.
+2. Amplify → *Hosting* → *Connect repository* → elige el repo y la rama.
+3. En **Environment variables** carga, antes del primer build:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   | Variable | Valor |
+   |---|---|
+   | `SUPABASE_URL` | `https://…supabase.co` |
+   | `SUPABASE_SERVICE_ROLE_KEY` | la llave de servicio (secreta) |
+   | `DEEPSEEK_API_KEY` | la llave de DeepSeek |
+   | `OPENAI_API_KEY` | opcional, para audio y fotos |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. `amplify.yml` ya está en la raíz: instala con `npm ci`, copia esas variables a
+   `.env.production` para que el servidor las vea en cada visita, compila y publica `.next`.
+   Node se fija en `.nvmrc` (22).
 
-## Deploy on Vercel
+> Sin el paso de `.env.production` el sitio compila pero falla al entrar, porque las
+> variables del panel solo existen durante la compilación.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Seguridad del repositorio
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `.env*` está ignorado por git: ninguna llave se versiona.
+- No hay documentos, PDFs ni material de la firma dentro de la carpeta.
+- `sql/` solo contiene el esquema; los correos de ejemplo son marcadores.
+
+## Qué hace
+
+| Pantalla | Función |
+|---|---|
+| `/login` | Correo y contraseña contra Supabase Auth |
+| `/` | Inicio: alumnos, sesiones, compromisos y accesos grandes |
+| `/alumnos` | Lista y alta de alumnos |
+| `/alumnos/[id]` | Ficha, sesiones, agendar, documentos y calendario |
+| `/subir` | Archivo (PDF, Word, VTT, TXT, audio, foto) → texto → análisis → base |
+| `/chat` | Agente con contexto de alumnos, sesiones y material de la firma |
+| `/admin` | Material de la firma, tareas de aplicación y equipo |
+
+## Documentos y calendario
+
+| Ruta | Devuelve |
+|---|---|
+| `GET /api/documentos/:sesionId/minuta` | PDF de la sesión |
+| `GET /api/documentos/:sesionId/ficha` | DOCX de preparación |
+| `GET /api/documentos/:sesionId/presentacion` | PPTX de junta técnica |
+| `GET /api/calendario/:sesionId` | `.ics` para Gmail, Outlook o Apple Calendar |
+
+El `.ics` no requiere OAuth: se descarga y se abre en el calendario del coach.
+
+## Base de datos
+
+- `sql/001-esquema.sql` — tablas del MVP (ya aplicado).
+- `sql/002-material.sql` — biblioteca de material y búsqueda en español (**pendiente de correr**).
+
+Los usuarios se crean con el script de `CEDEM/coach-demo/scripts/crear-usuario.mjs`.
