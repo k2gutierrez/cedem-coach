@@ -111,3 +111,15 @@ Hay dos formas de llevar las sesiones al calendario:
 El token del feed es un HMAC del id del coach con `CALENDARIO_SECRETO` (o, si no
 está definida, la llave de servicio). Si se rota esa llave, las ligas cambian y
 hay que volver a suscribirse.
+
+## Subida de sesiones
+
+`POST /api/sesiones` recibe `multipart/form-data` (`alumnoId`, `fecha`, `archivo`) y devuelve
+JSON. Se usa desde la pantalla **Subir sesión** con `fetch`, no con Server Action, porque así
+el error real llega al usuario en vez de una página genérica.
+
+- **Máximo 5 MB por archivo.** Es el límite práctico de una función SSR en Amplify; una
+  transcripción de Zoom pesa menos de 200 KB, así que sobra. Un audio largo sí se pasa: para
+  eso hace falta subir directo a Supabase Storage y procesar aparte.
+- El análisis usa `deepseek-flash` y recorta la transcripción a 8 000 caracteres para
+  responder en menos de 10 segundos y no chocar con el tiempo máximo de la función.

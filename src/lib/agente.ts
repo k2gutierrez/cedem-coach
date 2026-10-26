@@ -38,7 +38,8 @@ Reglas:
 - No inventes. Si no está en la transcripción, no lo pongas.
 - Los compromisos son acciones concretas que alguien aceptó hacer, con fecha si se mencionó.
 - Cita textualmente cuando el dato sea importante (campo "cita").
-- Devuelves SOLO un objeto JSON válido, sin texto adicional, con esta forma:
+- Devuelves SOLO un objeto JSON válido, sin texto adicional, con esta forma.
+- Sé breve: máximo 4 hallazgos y 4 compromisos; cada texto de una o dos líneas.
 {
   "resumen": "3 a 5 líneas con lo esencial de la sesión",
   "nota": "recomendación breve para el coach sobre cómo llegar a la siguiente sesión",
@@ -83,7 +84,7 @@ ${listaTareas}
 
 Transcripción de la sesión:
 """
-${transcripcion.slice(0, 24000)}
+${transcripcion.slice(0, 8000)}
 """`;
 
   const r = await fetch(URL_API, {
@@ -93,7 +94,7 @@ ${transcripcion.slice(0, 24000)}
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.DEEPSEEK_MODELO_ANALISIS || "deepseek-v4-pro",
+      model: process.env.DEEPSEEK_MODELO_ANALISIS || "deepseek-flash",
       temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [
