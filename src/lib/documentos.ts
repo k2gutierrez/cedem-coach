@@ -38,12 +38,14 @@ export async function minutaPDF({
   coach,
   hallazgos,
   compromisos,
+  tareas = [],
 }: {
   alumno: Persona;
   sesion: SesionDoc;
   coach: Coach;
   hallazgos: Hallazgo[];
   compromisos: Compromiso[];
+  tareas?: { titulo: string; abordada: boolean }[];
 }): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const normal = await pdf.embedFont(StandardFonts.Helvetica);
@@ -157,8 +159,16 @@ export async function minutaPDF({
     y -= 8;
   }
 
+  if (tareas.length) {
+    seccion("Tareas de aplicación");
+    for (const t of tareas) {
+      texto(` `, { size: 10.5 });
+    }
+    y -= 6;
+  }
+
   if (sesion.nota_coach) {
-    seccion("Para la siguiente sesión");
+    seccion("Seguimiento");
     texto(sesion.nota_coach);
   }
 
@@ -369,4 +379,209 @@ export async function presentacionPPTX({
 
   const buffer = (await pptx.write({ outputType: "nodebuffer" })) as Buffer;
   return buffer;
+}
+
+/* ------------------------------------------------------------------ */
+/* Minuta en Word (mismo contenido que el PDF, editable)               */
+/* ------------------------------------------------------------------ */
+
+export async function minutaDOCX({
+  alumno,
+  sesion,
+  coach,
+  hallazgos,
+  compromisos,
+  tareas,
+}: {
+  alumno: Persona;
+  sesion: SesionDoc;
+  coach: Coach;
+  hallazgos: Hallazgo[];
+  compromisos: Compromiso[];
+  tareas: { titulo: string; abordada: boolean }[];
+}): Promise<Buffer> {
+  const titulo = (t: string) =>
+    new Paragraph({ text: t, heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 100 } });
+
+  const cuerpo: Paragraph[] = [
+    new Paragraph({
+      children: [
+        new ImageRun({
+          type: "png",
+          data: Buffer.from(LOGO_NAVY, "base64"),
+          transformation: { width: 140, height: (140 * 300) / 1061 },
+          altText: { title: "CEDEM", description: "Logotipo CEDEM", name: "cedem" },
+        }),
+      ],
+      spacing: { after: 200 },
+    }),
+    new Paragraph({ text: "Minuta de coaching", heading: HeadingLevel.TITLE }),
+    new Paragraph({ children: [new TextRun({ text: alumno.nombre, bold: true, size: 28 })] }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: [alumno.cargo, alumno.empresa].filter(Boolean).join(" · ") || "Sin empresa registrada",
+          color: "55617A",
+        }),
+      ],
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `Sesión del ${fechaBonita(sesion.fecha)} · Coach: ${coach.nombre}`,
+          color: "55617A",
+        }),
+      ],
+      spacing: { after: 200 },
+    }),
+  ];
+
+  if (sesion.resumen_ejecutivo) {
+    cuerpo.push(titulo("Resumen de la sesión"), new Paragraph({ text: sesion.resumen_ejecutivo }));
+  }
+
+  if (hallazgos.length) {
+    cuerpo.push(titulo("Hallazgos"));
+    hallazgos.forEach((h, i) => {
+      cuerpo.push(
+        new Paragraph({ children: [new TextRun({ text: `${i + 1}. ${h.titulo}`, bold: true })] }),
+        ...(h.detalle ? [new Paragraph({ text: h.detalle })] : []),
+        ...(h.cita ? [new Paragraph({ children: [new TextRun({ text: `“${h.cita}”`, italics: true, color: "55617A" })] })] : [])
+      );
+    });
+  }
+
+  if (compromisos.length) {
+    cuerpo.push(titulo("Compromisos"));
+    for (const c of compromisos) {
+      cuerpo.push(
+        new Paragraph({
+          text: `${c.texto}${c.fecha ? ` — ${fechaBonita(c.fecha)}` : ""}`,
+          bullet: { level: 0 },
+        })
+      );
+    }
+  }
+
+  if (tareas.length) {
+    cuerpo.push(titulo("Tareas de aplicación"));
+    for (const t of tareas) {
+      cuerpo.push(new Paragraph({ text: `${t.abordada ? "☑" : "☐"} ${t.titulo}` }));
+    }
+  }
+
+  if (sesion.nota_coach) {
+    cuerpo.push(titulo("Seguimiento"), new Paragraph({ text: sesion.nota_coach }));
+  }
+
+  const doc = new Document({
+    creator: "CEDEM Coach",
+    title: `Minuta · ${alumno.nombre} · ${sesion.fecha}`,
+    sections: [{ properties: {}, children: cuerpo }],
+  });
+
+  return Packer.toBuffer(doc);
+}
+
+/* ------------------------------------------------------------------ */
+/* Ficha corta del alumno: estado del caso en una hoja                 */
+/* ------------------------------------------------------------------ */
+
+export async function fichaCortaDOCX({
+  alumno,
+  coach,
+  sesiones,
+  compromisos,
+  tareas,
+}: {
+  alumno: Persona;
+  coach: Coach;
+  sesiones: (SesionDoc & { estado?: string })[];
+  compromisos: { texto: string; fecha?: string | null; estado?: string }[];
+  tareas: { titulo: string; abordada: boolean }[];
+}): Promise<Buffer> {
+  const titulo = (t: string) =>
+    new Paragraph({ text: t, heading: HeadingLevel.HEADING_2, spacing: { before: 220, after: 90 } });
+
+  const abiertos = compromisos.filter((c) => c.estado !== "cumplido");
+  const cumplidos = compromisos.filter((c) => c.estado === "cumplido");
+
+  const cuerpo: Paragraph[] = [
+    new Paragraph({
+      children: [
+        new ImageRun({
+          type: "png",
+          data: Buffer.from(LOGO_NAVY, "base64"),
+          transformation: { width: 120, height: (120 * 300) / 1061 },
+          altText: { title: "CEDEM", description: "Logotipo CEDEM", name: "cedem" },
+        }),
+      ],
+      spacing: { after: 160 },
+    }),
+    new Paragraph({ text: `Ficha · ${alumno.nombre}`, heading: HeadingLevel.TITLE }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `${new Date().toLocaleDateString("es-MX", { dateStyle: "long" })} · Coach: ${coach.nombre}`,
+          color: "55617A",
+        }),
+      ],
+    }),
+  ];
+
+  cuerpo.push(
+    titulo("Proyecto detonador"),
+    new Paragraph({ text: alumno.reto || "Aún no se define." })
+  );
+
+  cuerpo.push(titulo("Compromisos abiertos"));
+  if (abiertos.length === 0) {
+    cuerpo.push(new Paragraph({ text: "Sin compromisos pendientes." }));
+  } else {
+    for (const c of abiertos) {
+      cuerpo.push(
+        new Paragraph({
+          text: c.fecha ? `${c.texto} — ${fechaBonita(c.fecha)}` : c.texto,
+          bullet: { level: 0 },
+        })
+      );
+    }
+  }
+
+  if (cumplidos.length) {
+    cuerpo.push(titulo("Compromisos cumplidos"));
+    for (const c of cumplidos) {
+      cuerpo.push(new Paragraph({ text: c.texto, bullet: { level: 0 } }));
+    }
+  }
+
+  if (tareas.length) {
+    cuerpo.push(titulo("Tareas de aplicación"));
+    for (const t of tareas) {
+      cuerpo.push(new Paragraph({ text: `${t.abordada ? "☑" : "☐"} ${t.titulo}` }));
+    }
+  }
+
+  if (sesiones.length) {
+    cuerpo.push(titulo("Temas vistos por sesión"));
+    for (const s of sesiones.slice(0, 10)) {
+      cuerpo.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: `${fechaBonita(s.fecha)}: `, bold: true }),
+            new TextRun({ text: (s.resumen_ejecutivo || "sin resumen").slice(0, 200) }),
+          ],
+          spacing: { after: 80 },
+        })
+      );
+    }
+  }
+
+  const doc = new Document({
+    creator: "CEDEM Coach",
+    title: `Ficha · ${alumno.nombre}`,
+    sections: [{ properties: {}, children: cuerpo }],
+  });
+
+  return Packer.toBuffer(doc);
 }

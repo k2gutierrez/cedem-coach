@@ -34,7 +34,9 @@ export default function Navegacion({
           </span>
           <span className="leading-tight">
             <span className="block text-[1.05rem] font-bold tracking-tight text-[var(--azul)]">CEDEM Coach</span>
-            <span className="block text-[0.8rem] text-[var(--texto-suave)]">Máster Euncet</span>
+            <span className="block max-w-[240px] text-[0.66rem] leading-[1.25] text-[var(--texto-suave)]">
+              Máster en Innovación y Emprendimiento en el Negocio Familiar
+            </span>
           </span>
         </Link>
 

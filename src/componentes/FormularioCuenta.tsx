@@ -93,10 +93,12 @@ export default function FormularioCuenta({
         <ol className="mt-4 flex list-decimal flex-col gap-2 pl-6 text-[var(--texto-suave)]">
           <li>Abre Google Calendar en la computadora.</li>
           <li>
-            En la barra izquierda, junto a <b>Otros calendarios</b>, pulsa <b>+</b> y elige{" "}
-            <b>Desde una URL</b>.
+            Entra a <b>Configuración</b> (el engrane, arriba a la derecha).
           </li>
-          <li>Pega la liga y confirma.</li>
+          <li>
+            En la barra lateral elige <b>Añadir calendario</b> → <b>Desde URL</b>.
+          </li>
+          <li>Pega la liga y confirma. Tarda en aparecer: Google lo revisa cada 2 o 3 horas.</li>
         </ol>
 
         <p className="mt-3 text-sm text-[var(--texto-suave)]">

@@ -87,8 +87,10 @@ export default function FormularioSubida({
     setError(null);
 
     const file = entrada.current?.files?.[0];
-    if (!alumnoId) return setError("Elige el alumno.");
+    if (!alumnoId) return setError("Elige el alumno o Consejo.");
     if (!file) return setError("Elige el archivo de la sesión.");
+
+    const esConsejo = alumnoId === "__consejo";
 
     try {
       if (file.size > DIRECTO_DESDE) {
@@ -115,7 +117,13 @@ export default function FormularioSubida({
         setFase("analizando");
 
         const { ok, datos } = await procesar(
-          { ruta: firma.ruta, nombre: file.name, alumnoId, fecha },
+          {
+            ruta: firma.ruta,
+            nombre: file.name,
+            alumnoId: esConsejo ? "" : alumnoId,
+            tipo: esConsejo ? "consejo" : "individual",
+            fecha,
+          },
           true
         );
         if (!ok) {
@@ -127,7 +135,8 @@ export default function FormularioSubida({
 
       setFase("analizando");
       const datos = new FormData();
-      datos.set("alumnoId", alumnoId);
+      datos.set("alumnoId", esConsejo ? "" : alumnoId);
+      datos.set("tipo", esConsejo ? "consejo" : "individual");
       datos.set("fecha", fecha);
       datos.set("archivo", file);
 
@@ -147,10 +156,10 @@ export default function FormularioSubida({
     }
   };
 
-  const terminar = (id?: string) => {
+  const terminar = (id?: string | null) => {
     setFase("listo");
     toast.success("Sesión guardada. El agente la está analizando…");
-    if (id) router.push(`/alumnos/${id}?nueva=1`);
+    router.push(id ? `/alumnos/?nueva=1` : "/");
   };
 
   const trabajando = fase === "enviando" || fase === "subiendo" || fase === "analizando" || fase === "listo";
@@ -169,6 +178,7 @@ export default function FormularioSubida({
             <option value="" disabled>
               Elige un alumno
             </option>
+            <option value="__consejo">Consejo · todos los alumnos</option>
             {alumnos.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.nombre}

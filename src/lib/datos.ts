@@ -12,6 +12,7 @@ export type Alumno = {
   reto: string | null;
   etapa: string | null;
   coach_id: string;
+  activo: boolean;
   creado_en: string;
 };
 
@@ -30,13 +31,17 @@ export type Sesion = {
 export type Tarea = { id: string; titulo: string; asignatura: string | null; mes: string | null };
 
 const CAMPOS_ALUMNO =
-  "id, nombre, empresa, giro, ciudad, generacion, cargo, reto, etapa, coach_id, creado_en";
+  "id, nombre, empresa, giro, ciudad, generacion, cargo, reto, etapa, coach_id, activo, creado_en";
 
 /** Filtro por rol: el coach solo ve lo suyo, el admin ve todo. */
 
-export async function alumnosDe(u: Usuario): Promise<Alumno[]> {
-  const base = db.from("alumnos").select(CAMPOS_ALUMNO).order("creado_en", { ascending: false });
-  const { data } = await (u.rol === "admin" ? base : base.eq("coach_id", u.id));
+export async function alumnosDe(u: Usuario, incluirBajas = false): Promise<Alumno[]> {
+  const base = db
+    .from("alumnos")
+    .select(CAMPOS_ALUMNO)
+    .order("creado_en", { ascending: false });
+  const filtrada = incluirBajas ? base : base.eq("activo", true);
+  const { data } = await (u.rol === "admin" ? filtrada : filtrada.eq("coach_id", u.id));
   return (data as Alumno[]) ?? [];
 }
 
@@ -94,17 +99,17 @@ export async function panelDe(u: Usuario) {
     qCompromisos = ids.length ? qCompromisos.in("alumno_id", ids) : qCompromisos.eq("alumno_id", "00000000-0000-0000-0000-000000000000");
   }
 
-  const [{ count: sesiones }, { count: compromisos }, recientes] = await Promise.all([
+  const [{ count: sesiones }, { count: compromisos }, proximas] = await Promise.all([
     qSesiones,
     qCompromisos,
-    ultimasSesiones(u),
+    proximasSesiones(u, 5),
   ]);
 
   return {
     alumnos: alumnos.length,
     sesiones: sesiones ?? 0,
     compromisos: compromisos ?? 0,
-    recientes,
+    proximas,
   };
 }
 
@@ -145,4 +150,93 @@ export async function listarMaterial(): Promise<{ items: Material[]; faltaTabla:
     return { items: [], faltaTabla: true };
   }
   return { items: (data as Material[]) ?? [], faltaTabla: false };
+}
+
+/* ------------------------------------------------------------------ */
+/* Próximas sesiones y agenda                                          */
+/* ------------------------------------------------------------------ */
+
+export type SesionProxima = {
+  id: string;
+  fecha: string;
+  hora: string | null;
+  duracion_min: number;
+  tipo: string;
+  zoom_url: string | null;
+  alumnos: { nombre: string } | null;
+};
+
+export async function proximasSesiones(u: Usuario, limite = 5): Promise<SesionProxima[]> {
+  const hoy = new Date().toISOString().slice(0, 10);
+  let consulta = db
+    .from("sesiones")
+    .select("id, fecha, hora, duracion_min, tipo, zoom_url, alumnos(nombre)")
+    .gte("fecha", hoy)
+    .eq("estado", "agendada")
+    .order("fecha", { ascending: true })
+    .order("hora", { ascending: true })
+    .limit(limite);
+
+  if (u.rol !== "admin") consulta = consulta.eq("coach_id", u.id);
+
+  const { data } = await consulta;
+  return (data ?? []) as unknown as SesionProxima[];
+}
+
+/** Sesiones del alumno, con lo necesario para reprogramar. */
+export async function sesionesDetalle(alumnoId: string): Promise<
+  {
+    id: string;
+    fecha: string;
+    hora: string | null;
+    duracion_min: number;
+    tipo: string;
+    estado: string;
+    resumen_ejecutivo: string | null;
+    nota_coach: string | null;
+    entrada_tipo: string | null;
+  }[]
+> {
+  const { data } = await db
+    .from("sesiones")
+    .select("id, fecha, hora, duracion_min, tipo, estado, resumen_ejecutivo, nota_coach, entrada_tipo")
+    .eq("alumno_id", alumnoId)
+    .order("fecha", { ascending: false })
+    .limit(50);
+  return data ?? [];
+}
+
+/* ------------------------------------------------------------------ */
+/* Tareas de aplicación por alumno                                     */
+/* ------------------------------------------------------------------ */
+
+export async function tareasConCobertura(alumnoId: string) {
+  const { data: tareas } = await db
+    .from("tareas")
+    .select("id, titulo, asignatura, mes")
+    .order("creado_en", { ascending: false })
+    .limit(60);
+
+  const { data: cobertura } = await db
+    .from("tarea_sesion")
+    .select("tarea_id, abordada, evidencia, sesion_id, sesiones!inner(alumno_id, fecha)")
+    .eq("sesiones.alumno_id", alumnoId);
+
+  const porTarea = new Map<string, { abordada: boolean; fecha?: string; evidencia?: string | null }>();
+  for (const c of (cobertura ?? []) as unknown as {
+    tarea_id: string;
+    abordada: boolean;
+    evidencia: string | null;
+    sesiones: { fecha: string };
+  }[]) {
+    const previo = porTarea.get(c.tarea_id);
+    if (!previo || (c.abordada && !previo.abordada)) {
+      porTarea.set(c.tarea_id, { abordada: c.abordada, fecha: c.sesiones?.fecha, evidencia: c.evidencia });
+    }
+  }
+
+  return (tareas ?? []).map((t) => ({
+    ...t,
+    ...(porTarea.get(t.id) ?? { abordada: false }),
+  }));
 }

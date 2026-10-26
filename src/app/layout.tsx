@@ -3,9 +3,11 @@ import type { ReactNode } from "react";
 import { Toaster } from "sonner";
 import "./globals.css";
 
+export const PROGRAMA = "Máster en Innovación y Emprendimiento en el Negocio Familiar";
+
 export const metadata: Metadata = {
-  title: "CEDEM Coach",
-  description: "Plataforma de coaches de CEDEM",
+  title: `CEDEM Coach · ${PROGRAMA}`,
+  description: `Plataforma de coaches de CEDEM · ${PROGRAMA} con Euncet Business School`,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

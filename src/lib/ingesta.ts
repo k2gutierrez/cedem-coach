@@ -17,27 +17,30 @@ export async function guardarArchivo({
   alumnoId,
   fecha,
   archivo,
+  tipo = "individual",
 }: {
   usuario: Usuario;
   alumnoId: string;
   fecha: string;
   archivo: File;
-}): Promise<{ ok: true; sesionId: string; alumnoId: string; caracteres: number } | Fallo> {
-  if (!alumnoId) return { ok: false, error: "Elige el alumno.", codigo: "sin_alumno" };
+  tipo?: "individual" | "consejo";
+}): Promise<{ ok: true; sesionId: string; alumnoId: string | null; caracteres: number } | Fallo> {
+  const esConsejo = tipo === "consejo";
+  if (!alumnoId && !esConsejo) return { ok: false, error: "Elige el alumno.", codigo: "sin_alumno" };
   if (!archivo || archivo.size === 0) return { ok: false, error: "Elige el archivo de la sesión.", codigo: "sin_archivo" };
   if (archivo.size > LIMITE_BYTES) {
     return { ok: false, codigo: "archivo_muy_grande", error: "El archivo pasa de 50 MB." };
   }
 
-  const { data: alumno } = await db
-    .from("alumnos")
-    .select("id, nombre, coach_id")
-    .eq("id", alumnoId)
-    .maybeSingle();
+  const alumno = esConsejo
+    ? null
+    : (await db.from("alumnos").select("id, nombre, coach_id").eq("id", alumnoId).maybeSingle()).data;
 
-  if (!alumno) return { ok: false, error: "Ese alumno no existe.", codigo: "alumno_inexistente" };
-  if (usuario.rol !== "admin" && alumno.coach_id !== usuario.id) {
-    return { ok: false, error: "Ese alumno no es tuyo.", codigo: "sin_permiso" };
+  if (!esConsejo) {
+    if (!alumno) return { ok: false, error: "Ese alumno no existe.", codigo: "alumno_inexistente" };
+    if (usuario.rol !== "admin" && alumno.coach_id !== usuario.id) {
+      return { ok: false, error: "Ese alumno no es tuyo.", codigo: "sin_permiso" };
+    }
   }
 
   let leido;
@@ -51,10 +54,10 @@ export async function guardarArchivo({
 
   const datos = {
     coach_id: usuario.id,
-    alumno_id: alumnoId,
-    tipo: "individual",
+    alumno_id: esConsejo ? null : alumnoId,
+    tipo: esConsejo ? "consejo" : "individual",
     fecha,
-    titulo: `Sesión con ${alumno.nombre}`,
+    titulo: esConsejo ? "Consejo" : `Sesión con ${alumno!.nombre}`,
     estado: "realizada",
     transcripcion: leido.texto,
     entrada_tipo: leido.tipo,
@@ -63,7 +66,7 @@ export async function guardarArchivo({
   const { data: previa } = await db
     .from("sesiones")
     .select("id")
-    .eq("alumno_id", alumnoId)
+    .eq("alumno_id", esConsejo ? "00000000-0000-0000-0000-000000000000" : alumnoId)
     .eq("fecha", fecha)
     .eq("estado", "agendada")
     .limit(1)
@@ -72,13 +75,13 @@ export async function guardarArchivo({
   if (previa?.id) {
     const { error } = await db.from("sesiones").update(datos).eq("id", previa.id);
     if (error) return { ok: false, error: `No se pudo guardar: ${error.message}`, codigo: "guardado" };
-    return { ok: true, sesionId: previa.id, alumnoId, caracteres: leido.caracteres };
+    return { ok: true, sesionId: previa.id, alumnoId: esConsejo ? null : alumnoId, caracteres: leido.caracteres };
   }
 
   const { data: creada, error } = await db.from("sesiones").insert(datos).select("id").single();
   if (error || !creada) return { ok: false, error: `No se pudo guardar: ${error?.message}`, codigo: "guardado" };
 
-  return { ok: true, sesionId: creada.id, alumnoId, caracteres: leido.caracteres };
+  return { ok: true, sesionId: creada.id, alumnoId: esConsejo ? null : alumnoId, caracteres: leido.caracteres };
 }
 
 /**
@@ -94,7 +97,7 @@ export async function analizarGuardada({
 }): Promise<{ ok: true; sesionId: string; alumnoId: string | null; resumen: string } | Fallo> {
   const { data: sesion } = await db
     .from("sesiones")
-    .select("id, coach_id, alumno_id, fecha, transcripcion, resumen_ejecutivo, alumnos(id, nombre, empresa, reto, etapa)")
+    .select("id, coach_id, alumno_id, tipo, fecha, transcripcion, resumen_ejecutivo, alumnos(id, nombre, empresa, reto, etapa)")
     .eq("id", sesionId)
     .maybeSingle();
 
@@ -114,14 +117,21 @@ export async function analizarGuardada({
     empresa: string | null;
     reto: string | null;
     etapa: string | null;
-  } | null) ?? { nombre: "Alumno", empresa: null, reto: null, etapa: null };
+  } | null);
+
+  const contextoAlumno = alumno ?? {
+    nombre: sesion.tipo === "consejo" ? "Consejo del grupo (todos los alumnos)" : "Alumno",
+    empresa: null,
+    reto: null,
+    etapa: null,
+  };
 
   let analisis;
   try {
     const tareas = await tareasDelMes();
     analisis = await analizarSesion({
       transcripcion: sesion.transcripcion,
-      alumno,
+      alumno: contextoAlumno,
       tareas: tareas.map((t) => ({ id: t.id, titulo: t.titulo })),
     });
   } catch (e) {

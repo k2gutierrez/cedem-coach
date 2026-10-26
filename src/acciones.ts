@@ -371,3 +371,147 @@ export async function actualizarCuenta(_prev: Estado, formData: FormData): Promi
     return { error: "No se pudo guardar. Intenta de nuevo." };
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Alumno: editar y dar de baja                                        */
+/* ------------------------------------------------------------------ */
+
+export async function editarAlumno(_prev: Estado, formData: FormData): Promise<Estado> {
+  try {
+    const usuario = await exigirUsuario();
+    const id = String(formData.get("id") || "");
+    const nombre = String(formData.get("nombre") || "").trim();
+    if (!id) return { error: "Falta el alumno." };
+    if (nombre.length < 3) return { error: "Escribe el nombre completo." };
+
+    const { data: alumno } = await db.from("alumnos").select("coach_id").eq("id", id).maybeSingle();
+    if (!alumno) return { error: "Ese alumno no existe." };
+    if (usuario.rol !== "admin" && alumno.coach_id !== usuario.id) return { error: "Ese alumno no es tuyo." };
+
+    const { error } = await db
+      .from("alumnos")
+      .update({
+        nombre,
+        empresa: String(formData.get("empresa") || "").trim() || null,
+        cargo: String(formData.get("cargo") || "").trim() || null,
+        reto: String(formData.get("reto") || "").trim() || null,
+      })
+      .eq("id", id);
+
+    if (error) return { error: `No se pudo guardar: ${error.message}` };
+    revalidatePath(`/alumnos/${id}`);
+    revalidatePath("/alumnos");
+    return { ok: "Datos del alumno actualizados." };
+  } catch {
+    return { error: "No se pudo guardar." };
+  }
+}
+
+/** Baja lógica: el alumno deja de aparecer a los coaches, pero nada se borra. */
+export async function bajaAlumno(_prev: Estado, formData: FormData): Promise<Estado> {
+  try {
+    const usuario = await exigirAdmin();
+    const id = String(formData.get("id") || "");
+    const volver = String(formData.get("volver") || "1") === "1";
+
+    if (!id) return { error: "Falta el alumno." };
+
+    const { error } = await db.from("alumnos").update({ activo: volver }).eq("id", id);
+    if (error) return { error: `No se pudo actualizar: ${error.message}` };
+
+    revalidatePath("/alumnos");
+    revalidatePath(`/alumnos/${id}`);
+    return { ok: volver ? "Alumno reactivado." : "Alumno dado de baja. Su historial se conserva." };
+  } catch {
+    return { error: "Solo la administración puede dar de baja a un alumno." };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Sesiones: reprogramar, cancelar y eliminar                          */
+/* ------------------------------------------------------------------ */
+
+export async function actualizarSesion(_prev: Estado, formData: FormData): Promise<Estado> {
+  try {
+    const usuario = await exigirUsuario();
+    const id = String(formData.get("id") || "");
+    const fecha = String(formData.get("fecha") || "");
+    const hora = String(formData.get("hora") || "09:00");
+    const duracion = Number(formData.get("duracion") || 60);
+    const alumnoId = String(formData.get("alumnoId") || "");
+
+    if (!id || !fecha) return { error: "Falta la fecha." };
+
+    const { data: sesion } = await db.from("sesiones").select("coach_id").eq("id", id).maybeSingle();
+    if (!sesion) return { error: "Esa sesión no existe." };
+    if (usuario.rol !== "admin" && sesion.coach_id !== usuario.id) return { error: "Esa sesión no es tuya." };
+
+    const { error } = await db
+      .from("sesiones")
+      .update({ fecha, hora, duracion_min: duracion })
+      .eq("id", id);
+
+    if (error) return { error: `No se pudo actualizar: ${error.message}` };
+
+    revalidatePath("/");
+    if (alumnoId) revalidatePath(`/alumnos/${alumnoId}`);
+    return { ok: "Sesión reprogramada." };
+  } catch {
+    return { error: "No se pudo actualizar la sesión." };
+  }
+}
+
+export async function eliminarSesion(_prev: Estado, formData: FormData): Promise<Estado> {
+  try {
+    const usuario = await exigirUsuario();
+    const id = String(formData.get("id") || "");
+    const alumnoId = String(formData.get("alumnoId") || "");
+
+    const { data: sesion } = await db.from("sesiones").select("coach_id").eq("id", id).maybeSingle();
+    if (!sesion) return { error: "Esa sesión no existe." };
+    if (usuario.rol !== "admin" && sesion.coach_id !== usuario.id) return { error: "Esa sesión no es tuya." };
+
+    const { error } = await db.from("sesiones").delete().eq("id", id);
+    if (error) return { error: `No se pudo eliminar: ${error.message}` };
+
+    revalidatePath("/");
+    if (alumnoId) revalidatePath(`/alumnos/${alumnoId}`);
+    return { ok: "Sesión eliminada." };
+  } catch {
+    return { error: "No se pudo eliminar la sesión." };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Agendar un Consejo (todos los alumnos)                              */
+/* ------------------------------------------------------------------ */
+
+export async function agendarConsejo(_prev: Estado, formData: FormData): Promise<Estado> {
+  try {
+    const usuario = await exigirUsuario();
+    const fecha = String(formData.get("fecha") || "");
+    const hora = String(formData.get("hora") || "09:00");
+    const duracion = Number(formData.get("duracion") || 120);
+
+    if (!fecha) return { error: "Elige la fecha." };
+
+    const { error } = await db.from("sesiones").insert({
+      coach_id: usuario.id,
+      alumno_id: null,
+      tipo: "consejo",
+      fecha,
+      hora,
+      duracion_min: duracion,
+      estado: "agendada",
+      titulo: "Consejo",
+      zoom_url: usuario.zoom_url,
+    });
+
+    if (error) return { error: `No se pudo agendar: ${error.message}` };
+
+    revalidatePath("/");
+    return { ok: "Consejo agendado." };
+  } catch {
+    return { error: "No se pudo agendar el Consejo." };
+  }
+}

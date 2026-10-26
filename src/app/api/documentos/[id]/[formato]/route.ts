@@ -1,15 +1,28 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { usuarioActual } from "@/lib/sesion";
-import { fichaDOCX, minutaPDF, presentacionPPTX } from "@/lib/documentos";
+import { fichaCortaDOCX, minutaDOCX, minutaPDF, presentacionPPTX } from "@/lib/documentos";
 
-const FORMATOS = ["minuta", "ficha", "presentacion"] as const;
+const FORMATOS = ["minuta", "minuta-word", "ficha", "presentacion"] as const;
 type Formato = (typeof FORMATOS)[number];
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string; formato: string }> }
-) {
+function hoyISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function tareasDeSesion(sesionId: string) {
+  const { data } = await db
+    .from("tarea_sesion")
+    .select("abordada, tareas(titulo)")
+    .eq("sesion_id", sesionId);
+
+  return ((data ?? []) as unknown as { abordada: boolean; tareas: { titulo: string } | null }[]).map((t) => ({
+    titulo: t.tareas?.titulo ?? "Tarea",
+    abordada: t.abordada,
+  }));
+}
+
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string; formato: string }> }) {
   const usuario = await usuarioActual();
   if (!usuario) return NextResponse.json({ error: "sin_sesion" }, { status: 401 });
 
@@ -39,13 +52,31 @@ export async function GET(
 
   const base = { fecha: sesion.fecha, resumen_ejecutivo: sesion.resumen_ejecutivo, nota_coach: sesion.nota_coach };
   const coach = { nombre: usuario.nombre, email: usuario.email };
-  const nombreArchivo = `cedem-${(alumno?.nombre || "sesion").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const slug = (alumno?.nombre || "sesion").toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-  if (formato === "minuta") {
-    const [{ data: hallazgos }, { data: compromisos }] = await Promise.all([
+  if (formato === "minuta" || formato === "minuta-word") {
+    const [{ data: hallazgos }, { data: compromisos }, tareas] = await Promise.all([
       db.from("hallazgos").select("titulo, detalle, cita").eq("sesion_id", id),
       db.from("compromisos").select("texto, responsable, fecha").eq("sesion_id", id),
+      tareasDeSesion(id),
     ]);
+
+    if (formato === "minuta-word") {
+      const docx = await minutaDOCX({
+        alumno: alumno ?? { nombre: "Alumno" },
+        sesion: base,
+        coach,
+        hallazgos: hallazgos ?? [],
+        compromisos: compromisos ?? [],
+        tareas,
+      });
+      return new NextResponse(new Uint8Array(docx), {
+        headers: {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "Content-Disposition": `attachment; filename="${slug}-minuta-${sesion.fecha}.docx"`,
+        },
+      });
+    }
 
     const pdf = await minutaPDF({
       alumno: alumno ?? { nombre: "Alumno" },
@@ -53,12 +84,13 @@ export async function GET(
       coach,
       hallazgos: hallazgos ?? [],
       compromisos: compromisos ?? [],
+      tareas,
     });
 
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${nombreArchivo}-minuta.pdf"`,
+        "Content-Disposition": `attachment; filename="${slug}-minuta-${sesion.fecha}.pdf"`,
       },
     });
   }
@@ -66,37 +98,53 @@ export async function GET(
   if (formato === "ficha") {
     if (!alumno) return NextResponse.json({ error: "sesion_sin_alumno" }, { status: 400 });
 
-    const [{ data: sesiones }, { data: compromisos }] = await Promise.all([
+    const [{ data: sesiones }, { data: compromisos }, tareas] = await Promise.all([
       db
         .from("sesiones")
-        .select("fecha, resumen_ejecutivo, nota_coach")
+        .select("fecha, resumen_ejecutivo, nota_coach, estado")
         .eq("alumno_id", alumno.id)
         .order("fecha", { ascending: false })
-        .limit(6),
+        .limit(10),
       db
         .from("compromisos")
-        .select("texto, responsable, fecha")
+        .select("texto, fecha, estado")
         .eq("alumno_id", alumno.id)
-        .eq("estado", "abierto")
-        .limit(12),
+        .order("creado_en", { ascending: false })
+        .limit(20),
+      (async () => {
+        const { data: t } = await db
+          .from("tareas")
+          .select("id, titulo")
+          .order("creado_en", { ascending: false })
+          .limit(30);
+        const { data: c } = await db
+          .from("tarea_sesion")
+          .select("tarea_id, abordada, sesiones!inner(alumno_id)")
+          .eq("sesiones.alumno_id", alumno.id);
+        const hechas = new Set(
+          ((c ?? []) as unknown as { tarea_id: string; abordada: boolean }[]).filter((x) => x.abordada).map((x) => x.tarea_id)
+        );
+        return (t ?? []).map((x) => ({ titulo: x.titulo, abordada: hechas.has(x.id) }));
+      })(),
     ]);
 
-    const docx = await fichaDOCX({
+    const docx = await fichaCortaDOCX({
       alumno,
       coach,
       sesiones: sesiones ?? [],
       compromisos: compromisos ?? [],
+      tareas,
     });
 
     return new NextResponse(new Uint8Array(docx), {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="${nombreArchivo}-ficha.docx"`,
+        "Content-Disposition": `attachment; filename="${slug}-ficha-${hoyISO()}.docx"`,
       },
     });
   }
 
-  // Presentación: los casos recientes del coach (o del alumno de esta sesión).
+  // Presentación de junta técnica
   const { data: recientes } = await db
     .from("sesiones")
     .select("id, fecha, resumen_ejecutivo, nota_coach, alumno_id, alumnos(nombre, empresa, cargo, reto)")
@@ -108,9 +156,10 @@ export async function GET(
   for (const s of recientes ?? []) {
     const { data: hs } = await db.from("hallazgos").select("titulo, detalle, cita").eq("sesion_id", s.id).limit(4);
     casos.push({
-      alumno: (s.alumnos as unknown as { nombre: string; empresa: string | null; cargo: string | null; reto: string | null }) ?? {
-        nombre: "Alumno",
-      },
+      alumno:
+        (s.alumnos as unknown as { nombre: string; empresa: string | null; cargo: string | null; reto: string | null }) ?? {
+          nombre: "Alumno",
+        },
       sesion: { fecha: s.fecha, resumen_ejecutivo: s.resumen_ejecutivo, nota_coach: s.nota_coach },
       hallazgos: hs ?? [],
     });
@@ -121,7 +170,7 @@ export async function GET(
   return new NextResponse(new Uint8Array(pptx), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "Content-Disposition": `attachment; filename="cedem-junta-tecnica.pptx"`,
+      "Content-Disposition": `attachment; filename="cedem-junta-tecnica-${hoyISO()}.pptx"`,
     },
   });
 }
