@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -12,15 +13,20 @@ const SUGERENCIAS = [
   "¿Qué dice la metodología sobre el margen?",
 ];
 
+const limpiar = (t: string) => t.replace(/\[\[ACCION:[a-z]+\]\]/gi, "").trim();
+
 export default function Chat({
   nombre,
   alumnoId = null,
+  sesionId = null,
   inicial = [],
 }: {
   nombre: string;
   alumnoId?: string | null;
+  sesionId?: string | null;
   inicial?: Mensaje[];
 }) {
+  const router = useRouter();
   const [mensajes, setMensajes] = useState<Mensaje[]>(inicial);
   const [texto, setTexto] = useState("");
   const [pensando, setPensando] = useState(false);
@@ -64,6 +70,18 @@ export default function Chat({
           copia[copia.length - 1] = { rol: "assistant", texto: acumulado };
           return copia;
         });
+      }
+
+      if (/\[\[ACCION:minuta\]\]/i.test(acumulado) && sesionId) {
+        toast.info("Aplicando los cambios a la minuta…");
+        const ajuste = await fetch(`/api/sesiones/${sesionId}/ajustar`, { method: "POST" });
+        if (ajuste.ok) {
+          toast.success("Minuta actualizada con lo que platicaron.");
+          router.refresh();
+        } else {
+          const j = (await ajuste.json().catch(() => ({}))) as { error?: string };
+          toast.error(j.error || "No se pudo actualizar la minuta. Usa el botón de la sesión.");
+        }
       }
 
       if (!acumulado.trim()) {
@@ -115,7 +133,7 @@ export default function Chat({
                     Agente CEDEM
                   </div>
                 )}
-                <div className="whitespace-pre-wrap">{m.texto || (pensando ? "…" : "")}</div>
+                <div className="whitespace-pre-wrap">{limpiar(m.texto) || (pensando ? "…" : "")}</div>
               </div>
             </div>
           );

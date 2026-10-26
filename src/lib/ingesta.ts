@@ -18,12 +18,14 @@ export async function guardarArchivo({
   fecha,
   archivo,
   tipo = "individual",
+  sesionId,
 }: {
   usuario: Usuario;
   alumnoId: string;
   fecha: string;
   archivo: File;
   tipo?: "individual" | "consejo";
+  sesionId?: string;
 }): Promise<{ ok: true; sesionId: string; alumnoId: string | null; caracteres: number } | Fallo> {
   const esConsejo = tipo === "consejo";
   if (!alumnoId && !esConsejo) return { ok: false, error: "Elige el alumno.", codigo: "sin_alumno" };
@@ -52,18 +54,41 @@ export async function guardarArchivo({
     return { ok: false, error: `No se pudo leer el archivo: ${(e as Error).message}`, codigo: "lectura" };
   }
 
+  // Si el coach eligió una sesión ya agendada, se completa esa.
+  let idPrevia: string | null = null;
+  if (sesionId) {
+    const { data: elegida } = await db
+      .from("sesiones")
+      .select("id, coach_id")
+      .eq("id", sesionId)
+      .maybeSingle();
+    if (!elegida) return { ok: false, error: "Esa sesión no existe.", codigo: "no_existe" };
+    if (usuario.rol !== "admin" && elegida.coach_id !== usuario.id) {
+      return { ok: false, error: "Esa sesión no es tuya.", codigo: "sin_permiso" };
+    }
+    idPrevia = elegida.id;
+  }
+
+  let fechaFinal = fecha;
+  if (idPrevia) {
+    const { data: original } = await db.from("sesiones").select("fecha").eq("id", idPrevia).maybeSingle();
+    if (original?.fecha) fechaFinal = original.fecha;
+  }
+
   const datos = {
     coach_id: usuario.id,
     alumno_id: esConsejo ? null : alumnoId,
     tipo: esConsejo ? "consejo" : "individual",
-    fecha,
+    fecha: fechaFinal,
     titulo: esConsejo ? "Consejo" : `Sesión con ${alumno!.nombre}`,
     estado: "realizada",
     transcripcion: leido.texto,
     entrada_tipo: leido.tipo,
   };
 
-  const { data: previa } = await db
+  const { data: previa } = idPrevia
+    ? { data: { id: idPrevia } }
+    : await db
     .from("sesiones")
     .select("id")
     .eq("alumno_id", esConsejo ? "00000000-0000-0000-0000-000000000000" : alumnoId)

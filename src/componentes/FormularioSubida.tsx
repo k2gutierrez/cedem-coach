@@ -35,9 +35,11 @@ function subirAStorage(url: string, file: File, progreso: (p: number) => void) {
 
 export default function FormularioSubida({
   alumnos,
+  pendientes = [],
   alumnoInicial,
 }: {
   alumnos: { id: string; nombre: string }[];
+  pendientes?: { id: string; alumno_id: string | null; fecha: string; hora: string | null; tipo: string }[];
   alumnoInicial?: string;
 }) {
   const router = useRouter();
@@ -48,11 +50,19 @@ export default function FormularioSubida({
   const [encima, setEncima] = useState(false);
   const [alumnoId, setAlumnoId] = useState(alumnoInicial ?? "");
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [sesionElegida, setSesionElegida] = useState("");
   const entrada = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFase("inicio");
   }, [setFase]);
+
+  const suyas = pendientes.filter((p) => p.alumno_id === alumnoId && p.tipo !== "consejo");
+
+  useEffect(() => {
+    setSesionElegida(suyas[0]?.id ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alumnoId]);
 
   const elegir = (file?: File | null) => {
     if (!file) return;
@@ -122,6 +132,7 @@ export default function FormularioSubida({
             nombre: file.name,
             alumnoId: esConsejo ? "" : alumnoId,
             tipo: esConsejo ? "consejo" : "individual",
+            ...(sesionElegida ? { sesionId: sesionElegida } : {}),
             fecha,
           },
           true
@@ -138,6 +149,7 @@ export default function FormularioSubida({
       datos.set("alumnoId", esConsejo ? "" : alumnoId);
       datos.set("tipo", esConsejo ? "consejo" : "individual");
       datos.set("fecha", fecha);
+      if (sesionElegida) datos.set("sesionId", sesionElegida);
       datos.set("archivo", file);
 
       const { ok, datos: respuesta } = await procesar(datos, false);
@@ -187,11 +199,35 @@ export default function FormularioSubida({
           </select>
         </div>
 
-        <div className="campo">
-          <label htmlFor="fecha">Fecha de la sesión</label>
-          <input id="fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-        </div>
+        {!sesionElegida && (
+          <div className="campo">
+            <label htmlFor="fecha">Fecha de la sesión</label>
+            <input id="fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+          </div>
+        )}
       </div>
+
+      {suyas.length > 0 && (
+        <div className="campo">
+          <label htmlFor="sesion">¿Es una de tus sesiones agendadas?</label>
+          <select
+            id="sesion"
+            value={sesionElegida}
+            onChange={(e) => setSesionElegida(e.target.value)}
+          >
+            {suyas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.fecha}
+                {p.hora ? ` · ${p.hora.slice(0, 5)}` : ""} · Coaching individual
+              </option>
+            ))}
+            <option value="">Otra fecha (la de arriba)</option>
+          </select>
+          <span className="text-sm text-[var(--texto-suave)]">
+            Si eliges una agendada, esa sesión se marca como realizada y conserva su fecha.
+          </span>
+        </div>
+      )}
 
       <div
         className={`soltar ${encima ? "activo" : ""}`}

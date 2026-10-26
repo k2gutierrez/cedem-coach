@@ -1,6 +1,6 @@
 import Link from "next/link";
 import FormularioSubida from "@/componentes/FormularioSubida";
-import { alumnosDe } from "@/lib/datos";
+import { alumnosDe, sesionesPendientes } from "@/lib/datos";
 import { usuarioDePagina } from "@/lib/sesion";
 
 export default async function Subir({
@@ -9,7 +9,7 @@ export default async function Subir({
   searchParams: Promise<{ alumno?: string }>;
 }) {
   const usuario = await usuarioDePagina();
-  const alumnos = await alumnosDe(usuario);
+  const [alumnos, pendientes] = await Promise.all([alumnosDe(usuario), sesionesPendientes(usuario)]);
   const { alumno } = await searchParams;
 
   return (
@@ -35,6 +35,7 @@ export default async function Subir({
         <div className="tarjeta" style={{ padding: 26 }}>
           <FormularioSubida
             alumnos={alumnos.map((a) => ({ id: a.id, nombre: a.nombre }))}
+            pendientes={pendientes}
             alumnoInicial={alumno}
           />
         </div>

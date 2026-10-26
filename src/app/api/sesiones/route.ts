@@ -21,12 +21,15 @@ export async function POST(req: Request) {
     let fecha = new Date().toISOString().slice(0, 10);
     let rutaStorage: string | null = null;
     let tipoSesion: "individual" | "consejo" = "individual";
+    let sesionId: string | undefined;
 
     if (tipo.includes("application/json")) {
       const cuerpo = (await req.json()) as { ruta?: string; nombre?: string; alumnoId?: string; fecha?: string };
       alumnoId = String(cuerpo.alumnoId || "");
       fecha = String(cuerpo.fecha || fecha);
       if ((cuerpo as { tipo?: string }).tipo === "consejo") tipoSesion = "consejo";
+      const sid = (cuerpo as { sesionId?: string }).sesionId;
+      if (sid) sesionId = sid;
       rutaStorage = cuerpo.ruta || null;
 
       if (!rutaStorage) return NextResponse.json({ error: "Falta el archivo." }, { status: 400 });
@@ -48,10 +51,12 @@ export async function POST(req: Request) {
       alumnoId = String(formulario.get("alumnoId") || "");
       fecha = String(formulario.get("fecha") || fecha);
       if (String(formulario.get("tipo") || "") === "consejo") tipoSesion = "consejo";
+      const sid = String(formulario.get("sesionId") || "");
+      if (sid) sesionId = sid;
     }
 
     const esAudio = AUDIO.test(archivo.name);
-    const trabajo = guardarArchivo({ usuario, alumnoId, fecha, archivo, tipo: tipoSesion });
+    const trabajo = guardarArchivo({ usuario, alumnoId, fecha, archivo, tipo: tipoSesion, sesionId });
 
     const resultado = esAudio
       ? await Promise.race([

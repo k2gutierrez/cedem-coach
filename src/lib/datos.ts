@@ -263,3 +263,23 @@ export async function historialChat(
   if (error) return [];
   return (data ?? []).reverse().map((m) => ({ rol: m.rol as "user" | "assistant", texto: m.texto }));
 }
+
+/* ------------------------------------------------------------------ */
+/* Sesiones agendadas del coach (para subir la transcripción)          */
+/* ------------------------------------------------------------------ */
+
+export type Pendiente = { id: string; alumno_id: string | null; fecha: string; hora: string | null; tipo: string };
+
+export async function sesionesPendientes(u: Usuario): Promise<Pendiente[]> {
+  let consulta = db
+    .from("sesiones")
+    .select("id, alumno_id, fecha, hora, tipo")
+    .eq("estado", "agendada")
+    .order("fecha", { ascending: true })
+    .limit(100);
+
+  if (u.rol !== "admin") consulta = consulta.eq("coach_id", u.id);
+
+  const { data } = await consulta;
+  return (data ?? []) as Pendiente[];
+}

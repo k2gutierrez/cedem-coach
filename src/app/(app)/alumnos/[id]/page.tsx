@@ -78,7 +78,12 @@ export default async function FichaAlumno({
           Cuéntale lo que quieras corregir o agregar del alumno. Cuando termines, usa{" "}
           <b>Aplicar el chat a la minuta</b> en la sesión para que la corrige.
         </p>
-        <Chat nombre={usuario.nombre} alumnoId={alumno.id} inicial={historial} />
+        <Chat
+          nombre={usuario.nombre}
+          alumnoId={alumno.id}
+          sesionId={sesiones.find((s) => s.estado === "realizada")?.id ?? null}
+          inicial={historial}
+        />
       </section>
 
       <section>

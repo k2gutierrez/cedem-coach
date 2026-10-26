@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { usuarioActual } from "@/lib/sesion";
+import { ajustarMinuta } from "@/lib/ajuste";
 
 export const maxDuration = 60;
 
@@ -17,7 +18,10 @@ Reglas:
 - Cuando te pregunten qué hacer, propón 2 o 3 acciones concretas y deja la decisión al coach.
 - Si el coach te corrige o te da información nueva del caso, acéptala y tenla en cuenta en lo que
   sigue de la conversación; en la app sus correcciones se aplican a la minuta con un botón.
-- Si te piden un documento, di dónde generarlo.`;
+- Si te piden un documento, di dónde generarlo.
+- Cuando el coach te pida ACTUALIZAR la minuta del caso (corregir, agregar o quitar algo de una
+  sesión), además de responder, agrega al final una línea sola con exactamente: [[ACCION:minuta]]
+  No la agregues si solo están conversando o preguntando.`;
 
 function recortar(texto: string, max: number) {
   return texto.length > max ? `${texto.slice(0, max)}…` : texto;
@@ -128,7 +132,20 @@ export async function POST(req: Request) {
       .select("rol, texto")
       .eq("alumno_id", alumnoId)
       .order("creado_en", { ascending: false })
-      .limit(12);
+      .limit(6);
+
+    const { data: ultimaSesion } = await db
+      .from("sesiones")
+      .select("id, fecha")
+      .eq("alumno_id", alumnoId)
+      .eq("estado", "realizada")
+      .order("fecha", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (ultimaSesion) {
+      lineas.push("", `SESIÓN MÁS RECIENTE DEL ALUMNO: ${ultimaSesion.fecha} (id ${ultimaSesion.id})`);
+    }
 
     if (previos?.length) {
       lineas.push("", "CONVERSACIÓN PREVIA CON ESTE ALUMNO (lo más reciente al final):");
@@ -212,18 +229,21 @@ export async function POST(req: Request) {
       } catch {
         control.close();
       } finally {
-        if (completo.trim()) {
+        const limpio = completo.replace(/\[\[ACCION:[a-z]+\]\]/gi, "").trim();
+
+        if (limpio) {
           try {
             await db.from("chat_mensajes").insert({
               coach_id: usuario.id,
               alumno_id: alumnoId,
               rol: "assistant",
-              texto: completo.slice(0, 8000),
+              texto: limpio.slice(0, 8000),
             });
           } catch {
             /* sin memoria disponible */
           }
         }
+
       }
     },
     cancel() {
