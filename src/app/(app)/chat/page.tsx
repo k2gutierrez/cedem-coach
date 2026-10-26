@@ -1,8 +1,10 @@
 import Chat from "@/componentes/Chat";
+import { historialChat } from "@/lib/datos";
 import { usuarioDePagina } from "@/lib/sesion";
 
 export default async function Agente() {
   const usuario = await usuarioDePagina();
+  const historial = await historialChat(null, usuario.id);
 
   return (
     <div className="flex flex-col gap-5">
@@ -13,7 +15,7 @@ export default async function Agente() {
         </p>
       </header>
 
-      <Chat nombre={usuario.nombre} />
+      <Chat nombre={usuario.nombre} inicial={historial} />
     </div>
   );
 }

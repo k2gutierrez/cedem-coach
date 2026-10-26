@@ -240,3 +240,26 @@ export async function tareasConCobertura(alumnoId: string) {
     ...(porTarea.get(t.id) ?? { abordada: false }),
   }));
 }
+
+/* ------------------------------------------------------------------ */
+/* Memoria del chat                                                    */
+/* ------------------------------------------------------------------ */
+
+export async function historialChat(
+  alumnoId: string | null,
+  coachId?: string,
+  limite = 10
+): Promise<{ rol: "user" | "assistant"; texto: string }[]> {
+  let consulta = db
+    .from("chat_mensajes")
+    .select("rol, texto, creado_en")
+    .order("creado_en", { ascending: false })
+    .limit(limite);
+
+  consulta = alumnoId ? consulta.eq("alumno_id", alumnoId) : consulta.is("alumno_id", null);
+  if (coachId) consulta = consulta.eq("coach_id", coachId);
+
+  const { data, error } = await consulta;
+  if (error) return [];
+  return (data ?? []).reverse().map((m) => ({ rol: m.rol as "user" | "assistant", texto: m.texto }));
+}

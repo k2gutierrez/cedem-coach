@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { AccionesSesion } from "@/componentes/AccionesAlumno";
 import AnalizadorPendiente from "@/componentes/AnalizadorPendiente";
+import FormularioConsejo from "@/componentes/FormularioConsejo";
 import { db } from "@/lib/supabase";
 import { exigirUsuario } from "@/lib/sesion";
 
 type Consejo = {
   id: string;
   fecha: string;
+  hora: string | null;
+  duracion_min: number;
   estado: string;
   resumen_ejecutivo: string | null;
   nota_coach: string | null;
@@ -16,7 +20,7 @@ export default async function Consejos() {
 
   let consulta = db
     .from("sesiones")
-    .select("id, fecha, estado, resumen_ejecutivo, nota_coach")
+    .select("id, fecha, hora, duracion_min, estado, resumen_ejecutivo, nota_coach")
     .eq("tipo", "consejo")
     .order("fecha", { ascending: false })
     .limit(20);
@@ -40,6 +44,8 @@ export default async function Consejos() {
           </p>
         </div>
       </header>
+
+      <FormularioConsejo />
 
       {consejos.length === 0 ? (
         <div className="tarjeta text-[var(--texto-suave)]">Todavía no hay Consejos registrados.</div>
@@ -90,6 +96,15 @@ export default async function Consejos() {
                   Minuta Word
                 </a>
               </div>
+
+              <AccionesSesion
+                id={c.id}
+                alumnoId=""
+                fecha={c.fecha}
+                hora={c.hora}
+                duracion={c.duracion_min}
+                agendada={c.estado !== "realizada"}
+              />
             </li>
           ))}
         </ul>

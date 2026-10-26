@@ -33,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data: sesion } = await db
     .from("sesiones")
-    .select("id, fecha, coach_id, alumno_id, resumen_ejecutivo, nota_coach, alumnos(id, nombre, empresa, cargo, reto)")
+    .select("id, fecha, coach_id, alumno_id, resumen_ejecutivo, nota_coach, minuta_ajustada, alumnos(id, nombre, empresa, cargo, reto)")
     .eq("id", id)
     .maybeSingle();
 
@@ -50,7 +50,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     reto: string | null;
   } | null;
 
-  const base = { fecha: sesion.fecha, resumen_ejecutivo: sesion.resumen_ejecutivo, nota_coach: sesion.nota_coach };
+  type Ajustada = {
+    resumen?: string;
+    nota?: string;
+    hallazgos?: { titulo: string; detalle: string; cita?: string }[];
+    compromisos?: { texto: string; responsable?: string; fecha?: string | null }[];
+  };
+  const ajustada = (sesion.minuta_ajustada ?? null) as Ajustada | null;
+
+  const base = {
+    fecha: sesion.fecha,
+    resumen_ejecutivo: ajustada?.resumen ?? sesion.resumen_ejecutivo,
+    nota_coach: ajustada?.nota ?? sesion.nota_coach,
+  };
   const coach = { nombre: usuario.nombre, email: usuario.email };
   const slug = (alumno?.nombre || "sesion").toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
@@ -66,8 +78,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         alumno: alumno ?? { nombre: "Alumno" },
         sesion: base,
         coach,
-        hallazgos: hallazgos ?? [],
-        compromisos: compromisos ?? [],
+        hallazgos: ajustada?.hallazgos ?? hallazgos ?? [],
+        compromisos: ajustada?.compromisos ?? compromisos ?? [],
         tareas,
       });
       return new NextResponse(new Uint8Array(docx), {
@@ -82,8 +94,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       alumno: alumno ?? { nombre: "Alumno" },
       sesion: base,
       coach,
-      hallazgos: hallazgos ?? [],
-      compromisos: compromisos ?? [],
+      hallazgos: ajustada?.hallazgos ?? hallazgos ?? [],
+      compromisos: ajustada?.compromisos ?? compromisos ?? [],
       tareas,
     });
 

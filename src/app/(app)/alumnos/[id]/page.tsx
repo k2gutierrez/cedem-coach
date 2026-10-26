@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AccionesSesion, BotonBajaAlumno } from "@/componentes/AccionesAlumno";
+import AplicarChat from "@/componentes/AplicarChat";
+import Chat from "@/componentes/Chat";
 import AnalizadorPendiente from "@/componentes/AnalizadorPendiente";
 import FormularioAgenda from "@/componentes/FormularioAgenda";
 import FormularioAlumnoEdicion from "@/componentes/FormularioAlumnoEdicion";
-import { alumnoPorId, sesionesDetalle, tareasConCobertura } from "@/lib/datos";
+import { alumnoPorId, historialChat, sesionesDetalle, tareasConCobertura } from "@/lib/datos";
 import { usuarioDePagina } from "@/lib/sesion";
 
 export default async function FichaAlumno({
@@ -21,7 +23,11 @@ export default async function FichaAlumno({
   const alumno = await alumnoPorId(id, usuario);
   if (!alumno) notFound();
 
-  const [sesiones, tareas] = await Promise.all([sesionesDetalle(alumno.id), tareasConCobertura(alumno.id)]);
+  const [sesiones, tareas, historial] = await Promise.all([
+    sesionesDetalle(alumno.id),
+    tareasConCobertura(alumno.id),
+    historialChat(alumno.id),
+  ]);
   const realizadas = sesiones.filter((s) => s.estado === "realizada" || s.resumen_ejecutivo);
 
   return (
@@ -65,6 +71,15 @@ export default async function FichaAlumno({
       <FormularioAlumnoEdicion alumno={alumno} />
 
       <FormularioAgenda alumnoId={alumno.id} zoom={usuario.zoom_url} />
+
+      <section className="tarjeta" style={{ padding: 24 }}>
+        <h2 className="text-xl font-bold">Hablar del caso con el agente</h2>
+        <p className="mb-4 mt-1 text-[var(--texto-suave)]">
+          Cuéntale lo que quieras corregir o agregar del alumno. Cuando termines, usa{" "}
+          <b>Aplicar el chat a la minuta</b> en la sesión para que la corrige.
+        </p>
+        <Chat nombre={usuario.nombre} alumnoId={alumno.id} inicial={historial} />
+      </section>
 
       <section>
         <h2 className="mb-3 text-xl font-bold">Tareas de aplicación</h2>
@@ -178,6 +193,7 @@ export default async function FichaAlumno({
                         >
                           Ficha del alumno
                         </a>
+                        <AplicarChat sesionId={s.id} />
                       </>
                     )}
                   </div>

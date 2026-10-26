@@ -12,8 +12,16 @@ const SUGERENCIAS = [
   "¿Qué dice la metodología sobre el margen?",
 ];
 
-export default function Chat({ nombre }: { nombre: string }) {
-  const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+export default function Chat({
+  nombre,
+  alumnoId = null,
+  inicial = [],
+}: {
+  nombre: string;
+  alumnoId?: string | null;
+  inicial?: Mensaje[];
+}) {
+  const [mensajes, setMensajes] = useState<Mensaje[]>(inicial);
   const [texto, setTexto] = useState("");
   const [pensando, setPensando] = useState(false);
   const fin = useRef<HTMLDivElement>(null);
@@ -35,7 +43,7 @@ export default function Chat({ nombre }: { nombre: string }) {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mensajes: historial }),
+        body: JSON.stringify({ mensajes: historial, alumnoId }),
       });
 
       if (!r.ok || !r.body) {

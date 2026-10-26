@@ -157,3 +157,10 @@ máximo de Amplify:
    del alumno mientras se muestra "El agente está leyendo…".
 
 Si el análisis falla, la ficha ofrece **Reintentar análisis**; la transcripción ya está a salvo.
+
+## Memoria del chat (migración 005)
+
+- `sql/005-chat-memoria.sql` crea `chat_mensajes` y agrega `sesiones.minuta_ajustada`.
+- El chat guarda cada turno; el de un alumno se puede consultar en su ficha.
+- **Aplicar el chat a la minuta** pide al agente reescribir la minuta con las correcciones de la
+  conversación y guarda el resultado en `minuta_ajustada`; los PDF y Word la usan si existe.
