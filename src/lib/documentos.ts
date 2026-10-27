@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } from "docx";
 import PptxGenJS from "pptxgenjs";
-import { LOGO_BLANCO, LOGO_NAVY } from "./logo";
+import { LOGO_MIEEF } from "./logo";
 
 export type Persona = { nombre: string; empresa?: string | null; cargo?: string | null; reto?: string | null };
 export type SesionDoc = {
@@ -122,9 +122,17 @@ export async function minutaPDF({
   // Encabezado con el logotipo de CEDEM
   pagina.drawRectangle({ x: 0, y: ALTO - 84, width: ANCHO, height: 84, color: AZUL });
 
-  const logo = await pdf.embedPng(Buffer.from(LOGO_BLANCO, "base64"));
+  const logo = await pdf.embedPng(Buffer.from(LOGO_MIEEF, "base64"));
   const altoLogo = 30;
   const anchoLogo = (logo.width / logo.height) * altoLogo;
+  pagina.drawRectangle({
+    x: MARGEN - 8,
+    y: ALTO - 58,
+    width: anchoLogo + 16,
+    height: altoLogo + 8,
+    color: rgb(1, 1, 1),
+    opacity: 1,
+  });
   pagina.drawImage(logo, { x: MARGEN, y: ALTO - 54, width: anchoLogo, height: altoLogo });
 
   pagina.drawText("Minuta de coaching", {
@@ -230,7 +238,7 @@ export async function fichaDOCX({
       children: [
         new ImageRun({
           type: "png",
-          data: Buffer.from(LOGO_NAVY, "base64"),
+          data: Buffer.from(LOGO_MIEEF, "base64"),
           transformation: { width: 150, height: (150 * 300) / 1061 },
           altText: { title: "CEDEM", description: "Logotipo CEDEM", name: "cedem" },
         }),
@@ -320,12 +328,21 @@ export async function presentacionPPTX({
 
   const portada = pptx.addSlide();
   portada.background = { color: "0B2F6B" };
+  portada.addShape("roundRect", {
+    x: 0.6,
+    y: 0.42,
+    w: 2.35,
+    h: 0.9,
+    fill: { color: "FFFFFF" },
+    line: { color: "FFFFFF", width: 0 },
+    rectRadius: 0.06,
+  });
   portada.addImage({
-    data: `image/png;base64,${LOGO_BLANCO}`,
+    data: `image/png;base64,${LOGO_MIEEF}`,
     x: 0.7,
     y: 0.5,
     w: 2.1,
-    h: (2.1 * 240) / 901,
+    h: (2.1 * 177) / 400,
   });
   portada.addText(titulo, {
     x: 0.7,
@@ -356,11 +373,11 @@ export async function presentacionPPTX({
   for (const caso of casos.slice(0, 8)) {
     const slide = pptx.addSlide();
     slide.addImage({
-      data: `image/png;base64,${LOGO_NAVY}`,
-      x: 8.65,
-      y: 4.92,
-      w: 1.0,
-      h: (1.0 * 300) / 1061,
+      data: `image/png;base64,${LOGO_MIEEF}`,
+      x: 8.35,
+      y: 4.85,
+      w: 1.3,
+      h: (1.3 * 177) / 400,
     });
     slide.addText(caso.alumno.nombre, {
       x: 0.6,
@@ -434,7 +451,7 @@ export async function minutaDOCX({
       children: [
         new ImageRun({
           type: "png",
-          data: Buffer.from(LOGO_NAVY, "base64"),
+          data: Buffer.from(LOGO_MIEEF, "base64"),
           transformation: { width: 140, height: (140 * 300) / 1061 },
           altText: { title: "CEDEM", description: "Logotipo CEDEM", name: "cedem" },
         }),
@@ -537,7 +554,7 @@ export async function fichaCortaDOCX({
       children: [
         new ImageRun({
           type: "png",
-          data: Buffer.from(LOGO_NAVY, "base64"),
+          data: Buffer.from(LOGO_MIEEF, "base64"),
           transformation: { width: 120, height: (120 * 300) / 1061 },
           altText: { title: "CEDEM", description: "Logotipo CEDEM", name: "cedem" },
         }),
@@ -678,8 +695,14 @@ export async function briefPDF({
     }
   };
 
-  const logo = await pdf.embedPng(Buffer.from(LOGO_NAVY, "base64"));
-  pagina.drawImage(logo, { x: MARGEN, y: ALTO - MARGEN - 8, width: 110, height: (110 * 300) / 1061 });
+  const logo = await pdf.embedPng(Buffer.from(LOGO_MIEEF, "base64"));
+  const anchoBrief = 105;
+  pagina.drawImage(logo, {
+    x: MARGEN,
+    y: ALTO - MARGEN - 8,
+    width: anchoBrief,
+    height: (anchoBrief * 177) / 400,
+  });
   y = ALTO - MARGEN - 46;
 
   escribir(`Brief de contexto · ${alumno.nombre}`, { size: 18, font: negrita, color: AZUL });

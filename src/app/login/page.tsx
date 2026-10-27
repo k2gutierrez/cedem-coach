@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import FormularioEntrar from "@/componentes/FormularioEntrar";
 import { usuarioActual } from "@/lib/sesion";
 
-const PROGRAMA = "Máster en Innovación y Emprendimiento en el Negocio Familiar";
+const PROGRAMA = "Máster en Innovación y Emprendimiento en la Empresa Familiar";
 
 export default async function Login() {
   const usuario = await usuarioActual();
@@ -14,12 +14,12 @@ export default async function Login() {
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col gap-4">
           <Image
-            src="/cedem-logo-navy.png"
-            alt="CEDEM · Centro de Dueñez Empresaria"
-            width={190}
-            height={54}
+            src="/mief.png"
+            alt="Euncet Business School · UPC · CEDEM"
+            width={280}
+            height={124}
             priority
-            style={{ height: 54, width: "auto" }}
+            style={{ height: 78, width: "auto" }}
           />
           <p className="text-[0.95rem] leading-snug text-[var(--texto-suave)]">{PROGRAMA}</p>
         </div>
@@ -30,16 +30,6 @@ export default async function Login() {
             Usa el correo y la contraseña que te dio la coordinación.
           </p>
           <FormularioEntrar />
-        </div>
-
-        <div className="mt-8 flex items-center justify-center opacity-80">
-          <Image
-            src="/euncet.png"
-            alt="Euncet Business School · UPC"
-            width={190}
-            height={84}
-            style={{ height: 42, width: "auto" }}
-          />
         </div>
 
         <p className="mt-6 text-center text-sm text-[var(--texto-suave)]">

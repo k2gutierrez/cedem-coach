@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTransition } from "react";
@@ -29,13 +30,18 @@ export default function Navegacion({
     <header className="sticky top-0 z-20 border-b border-[var(--borde)] bg-white/95 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-3 px-5 py-3">
         <Link href="/" className="flex items-center gap-3 no-underline">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--azul)] text-lg font-bold text-white">
-            C
-          </span>
+          <Image
+            src="/mief.png"
+            alt="Euncet · CEDEM"
+            width={120}
+            height={53}
+            priority
+            style={{ height: 34, width: "auto" }}
+          />
           <span className="leading-tight">
-            <span className="block text-[1.05rem] font-bold tracking-tight text-[var(--azul)]">CEDEM Coach</span>
+            <span className="block text-[1.05rem] font-bold tracking-tight text-[var(--azul)]">MIEEF Coach</span>
             <span className="block max-w-[240px] text-[0.66rem] leading-[1.25] text-[var(--texto-suave)]">
-              Máster en Innovación y Emprendimiento en el Negocio Familiar
+              Máster en Innovación y Emprendimiento en la Empresa Familiar
             </span>
           </span>
         </Link>

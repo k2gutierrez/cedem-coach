@@ -1,6 +1,6 @@
-# CEDEM Coach · aplicación (Next.js)
+# MIEEF Coach · aplicación (Next.js)
 
-Plataforma de coaches del Máster con Euncet. Dos roles: **coach** y **admin**.
+Plataforma de los coaches MIEEF del Máster en Innovación y Emprendimiento en la Empresa Familiar (Euncet · CEDEM). Dos roles: **coach** y **admin**.
 
 ## Correr
 

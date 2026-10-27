@@ -16,9 +16,8 @@ const RAIZ = path.resolve(AQUI, "..");
 const SALIDA = path.join(RAIZ, "docs");
 fs.mkdirSync(SALIDA, { recursive: true });
 
-const LOGO = fs.readFileSync(path.join(RAIZ, "public", "cedem-logo-navy.png"));
-const LOGO_BLANCO = fs.readFileSync(path.join(RAIZ, "public", "cedem-logo-blanco.png"));
-const PROGRAMA = "Máster en Innovación y Emprendimiento en el Negocio Familiar";
+const LOGO = fs.readFileSync(path.join(RAIZ, "public", "mief.png"));
+const PROGRAMA = "Máster en Innovación y Emprendimiento en la Empresa Familiar";
 
 const AZUL = rgb(0.043, 0.184, 0.42);
 const CIAN = rgb(0.055, 0.604, 0.839);
@@ -36,7 +35,6 @@ async function construir({ titulo, subtitulo, bloques, archivo }) {
   const normal = await pdf.embedFont(StandardFonts.Helvetica);
   const negrita = await pdf.embedFont(StandardFonts.HelveticaBold);
   const logo = await pdf.embedPng(LOGO);
-  const logoBlanco = await pdf.embedPng(LOGO_BLANCO);
 
   let pagina = pdf.addPage([ANCHO, ALTO]);
   let y = ALTO - MARGEN;
@@ -51,12 +49,12 @@ async function construir({ titulo, subtitulo, bloques, archivo }) {
   };
 
   const cabecera = () => {
-    const anchoLogo = 90;
+    const anchoLogo = 86;
     pagina.drawImage(logo, {
       x: MARGEN,
-      y: ALTO - MARGEN - 20,
+      y: ALTO - MARGEN - 22,
       width: anchoLogo,
-      height: (anchoLogo * 300) / 1061,
+      height: (anchoLogo * 177) / 400,
     });
   };
 
@@ -125,11 +123,19 @@ async function construir({ titulo, subtitulo, bloques, archivo }) {
   // Portada
   pagina.drawRectangle({ x: 0, y: ALTO - 120, width: ANCHO, height: 120, color: AZUL });
   const anchoPortada = 150;
-  pagina.drawImage(logoBlanco, {
+  const altoPortada = (anchoPortada * 177) / 400;
+  pagina.drawRectangle({
+    x: MARGEN - 10,
+    y: ALTO - 86,
+    width: anchoPortada + 20,
+    height: altoPortada + 14,
+    color: rgb(1, 1, 1),
+  });
+  pagina.drawImage(logo, {
     x: MARGEN,
-    y: ALTO - 82,
+    y: ALTO - 80,
     width: anchoPortada,
-    height: (anchoPortada * 240) / 901,
+    height: altoPortada,
   });
   pagina.drawText(PROGRAMA, {
     x: MARGEN,
@@ -177,7 +183,7 @@ async function construir({ titulo, subtitulo, bloques, archivo }) {
 /* ------------------------------------------------------------------ */
 
 const COACH = [
-  { tipo: "parrafo", texto: "Guía para probar CEDEM Coach de principio a fin. Cada sección dice qué hacer y, al final, hay una lista de verificación para marcar lo que ya funciona y reportar lo que no." },
+  { tipo: "parrafo", texto: "Guía para probar MIEEF Coach de principio a fin. Cada sección dice qué hacer y, al final, hay una lista de verificación para marcar lo que ya funciona y reportar lo que no." },
 
   { tipo: "seccion", texto: "1 · Entrar" },
   { tipo: "pasos", items: [
@@ -290,7 +296,7 @@ const COACH = [
 
 
 const ADMIN = [
-  { tipo: "parrafo", texto: "Guía de administración de CEDEM Coach. Desde aquí se crean las cuentas, se carga el conocimiento de la firma y se supervisa el trabajo de los coaches." },
+  { tipo: "parrafo", texto: "Guía de administración de MIEEF Coach. Desde aquí se crean las cuentas, se carga el conocimiento de la firma y se supervisa el trabajo de los coaches." },
 
   { tipo: "seccion", texto: "1 · Entrar" },
   { tipo: "parrafo", texto: "Entra con tu cuenta de administración. En el menú aparece una sección extra: Administración. Los coaches no la ven." },
@@ -361,15 +367,15 @@ const ADMIN = [
 ];
 
 await construir({
-  titulo: "Manual del coach",
-  subtitulo: "Uso de la aplicación y qué probar · CEDEM Coach",
+  titulo: "Manual del coach MIEEF",
+  subtitulo: "Uso de la aplicación y qué probar · MIEEF Coach",
   bloques: COACH,
   archivo: "manual-coach.pdf",
 });
 
 await construir({
-  titulo: "Manual de administración",
-  subtitulo: "Cuentas, conocimiento y supervisión · CEDEM Coach",
+  titulo: "Manual de administración MIEEF",
+  subtitulo: "Cuentas, conocimiento y supervisión · MIEEF Coach",
   bloques: ADMIN,
   archivo: "manual-admin.pdf",
 });
