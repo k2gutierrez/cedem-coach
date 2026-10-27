@@ -15,7 +15,7 @@ type Consejo = {
   nota_coach: string | null;
 };
 
-export default async function Consejos() {
+export default async function Consejo() {
   const usuario = await exigirUsuario();
 
   let consulta = db
@@ -34,7 +34,7 @@ export default async function Consejos() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Consejos</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Consejo</h1>
           <p className="mt-1 text-[var(--texto-suave)]">
             Sesiones con todos los alumnos del grupo. Sube su transcripción desde{" "}
             <Link href="/subir" className="underline">
@@ -48,7 +48,7 @@ export default async function Consejos() {
       <FormularioConsejo />
 
       {consejos.length === 0 ? (
-        <div className="tarjeta text-[var(--texto-suave)]">Todavía no hay Consejos registrados.</div>
+        <div className="tarjeta text-[var(--texto-suave)]">Todavía no hay Consejo registrado.</div>
       ) : (
         <ul className="flex flex-col gap-4">
           {consejos.map((c) => (

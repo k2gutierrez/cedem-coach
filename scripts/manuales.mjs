@@ -211,14 +211,14 @@ const COACH = [
   { tipo: "pasos", items: [
     "En la ficha del alumno, abre “Agendar la siguiente sesión”.",
     "Elige fecha, hora, duración y si es coaching individual o Consejo.",
-    "El Consejo del mes se agenda en la sección Consejos, no dentro de un alumno.",
+    "El Consejo del mes se agenda en la sección Consejo, no dentro de un alumno.",
     "Puedes reprogramar o eliminar una sesión desde su tarjeta.",
   ]},
   { tipo: "parrafo", texto: "En Inicio aparecen tus próximas cinco sesiones, con fecha, hora, actividad, alumno y un botón para entrar a Zoom." },
 
   { tipo: "seccion", texto: "5 · Subir la sesión" },
   { tipo: "pasos", items: [
-    "Entra a Subir sesión y elige al alumno.",
+    "Entra a Subir transcripción y elige al alumno.",
     "A su lado aparece el selector “Sesión sin transcripción” con las que agendaste y aún no tienen archivo. Escoge la que corresponde: se completa, conserva su fecha y no se duplica.",
     "Si no estaba agendada, elige “Otra fecha”.",
     "Sube el archivo: transcripción de Zoom (.vtt), PDF, Word, audio o foto de tus notas. Si te equivocas, quítalo con la × antes de analizar.",

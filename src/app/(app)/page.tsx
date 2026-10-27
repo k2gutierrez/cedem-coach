@@ -25,7 +25,7 @@ function actividad(tipo: string) {
 
 export default async function Inicio() {
   const usuario = await usuarioDePagina();
-  const { alumnos, sesiones, compromisos, proximas } = await panelDe(usuario);
+  const { alumnos, sesiones, proximas } = await panelDe(usuario);
   const sinAlumnos = alumnos === 0;
 
   return (
@@ -52,13 +52,13 @@ export default async function Inicio() {
         <>
           <section className="flex flex-wrap gap-3">
             <Link href="/subir" className="btn btn-primario btn-grande">
-              ↑ Subir una sesión
+              ↑ Subir transcripción
             </Link>
             <Link href="/alumnos" className="btn btn-suave btn-grande">
               ☺ Ver mis alumnos
             </Link>
             <Link href="/consejos" className="btn btn-suave btn-grande">
-              ▤ Consejos
+              ▤ Consejo
             </Link>
             {usuario.zoom_url && (
               <a
@@ -120,7 +120,7 @@ export default async function Inicio() {
             )}
           </section>
 
-          <section className="grid gap-4 sm:grid-cols-3">
+          <section className="grid gap-4 sm:grid-cols-2">
             <div className="tarjeta">
               <div className="text-sm font-semibold uppercase tracking-wide text-[var(--texto-suave)]">
                 Alumnos activos
@@ -132,12 +132,6 @@ export default async function Inicio() {
                 Sesiones registradas
               </div>
               <div className="mt-1 text-4xl font-bold">{sesiones}</div>
-            </div>
-            <div className="tarjeta">
-              <div className="text-sm font-semibold uppercase tracking-wide text-[var(--texto-suave)]">
-                Compromisos abiertos
-              </div>
-              <div className="mt-1 text-4xl font-bold">{compromisos}</div>
             </div>
           </section>
         </>

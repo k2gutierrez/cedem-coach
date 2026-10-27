@@ -15,7 +15,7 @@ export default async function Subir({
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Subir una sesión</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Subir transcripción</h1>
         <p className="mt-1 text-[var(--texto-suave)]">
           El agente lee la conversación, saca hallazgos y compromisos y te deja la sesión lista.
         </p>
