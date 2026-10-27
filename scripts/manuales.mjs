@@ -177,7 +177,7 @@ async function construir({ titulo, subtitulo, bloques, archivo }) {
 /* ------------------------------------------------------------------ */
 
 const COACH = [
-  { tipo: "parrafo", texto: "Guía rápida para usar CEDEM Coach. Está pensada para hacerse en diez minutos y probar todo lo que hoy está funcionando." },
+  { tipo: "parrafo", texto: "Guía para probar CEDEM Coach de principio a fin. Cada sección dice qué hacer y, al final, hay una lista de verificación para marcar lo que ya funciona y reportar lo que no." },
 
   { tipo: "seccion", texto: "1 · Entrar" },
   { tipo: "pasos", items: [
@@ -187,18 +187,18 @@ const COACH = [
   { tipo: "nota", texto: "Si olvidaste la contraseña, pídele a la coordinación que te la restablezca." },
 
   { tipo: "seccion", texto: "2 · Mi cuenta" },
-  { tipo: "parrafo", texto: "Haz clic en tu nombre, arriba a la derecha. Ahí puedes cambiar:" },
+  { tipo: "parrafo", texto: "Haz clic en tu nombre, arriba a la derecha. Ahí cambias:" },
   { tipo: "vinetas", items: [
     "Tu nombre.",
-    "Tu liga de Zoom: es la misma para todas tus sesiones y se usa al agendar y en la invitación del calendario.",
+    "Tu liga de Zoom: es la misma para todas tus sesiones y se usa al agendar y en el calendario.",
     "Tu contraseña.",
   ]},
 
   { tipo: "seccion", texto: "3 · Tus alumnos" },
   { tipo: "pasos", items: [
-    "Entra a Alumnos y registra a cada uno: nombre, empresa, puesto.",
-    "El campo “proyecto detonador” es opcional. Déjalo en blanco si todavía no se define; lo puedes llenar después.",
-    "Para corregir algo, abre la ficha del alumno y usa “Editar los datos del alumno”.",
+    "Entra a Alumnos y registra a cada uno: nombre, empresa y puesto.",
+    "El “proyecto detonador” es opcional: déjalo en blanco si aún no se define y llénalo después.",
+    "Para corregir cualquier dato, abre la ficha del alumno y usa “Editar los datos del alumno”.",
   ]},
 
   { tipo: "seccion", texto: "4 · Agendar" },
@@ -208,66 +208,86 @@ const COACH = [
     "El Consejo del mes se agenda en la sección Consejos, no dentro de un alumno.",
     "Puedes reprogramar o eliminar una sesión desde su tarjeta.",
   ]},
+  { tipo: "parrafo", texto: "En Inicio aparecen tus próximas cinco sesiones, con fecha, hora, actividad, alumno y un botón para entrar a Zoom." },
 
   { tipo: "seccion", texto: "5 · Subir la sesión" },
   { tipo: "pasos", items: [
-    "Entra a Subir sesión.",
-    "Elige al alumno. Si tenía sesiones agendadas, aparecen en un selector: escoge la que corresponde.",
+    "Entra a Subir sesión y elige al alumno.",
+    "Si tenía sesiones agendadas, aparece un selector: escoge la que corresponde. Así esa sesión se completa, conserva su fecha y no se duplica.",
+    "Si no estaba agendada, elige “Otra fecha”.",
     "Sube el archivo: transcripción de Zoom (.vtt), PDF, Word, audio o foto de tus notas.",
-    "Pulsa Analizar la sesión. Primero se guarda el texto y luego el agente lo analiza.",
+    "Pulsa Analizar la sesión. Primero se guarda el texto y después el agente lo analiza.",
   ]},
-  { tipo: "nota", texto: "Al elegir una sesión agendada, esa se marca como realizada y conserva su fecha, así no se duplica. Los archivos pueden pesar hasta 50 MB; el audio de más de siete minutos todavía no se puede procesar de una vez: en ese caso sube la transcripción en texto." },
+  { tipo: "nota", texto: "Límites de hoy: máximo 50 MB por archivo. El audio de más de siete minutos no se puede procesar de una vez: en ese caso sube la transcripción en texto. Cuando la sesión queda analizada, desaparece de las próximas sesiones." },
 
   { tipo: "seccion", texto: "6 · Revisar el resultado" },
-  { tipo: "parrafo", texto: "En la ficha del alumno, cada sesión muestra el resumen, los hallazgos y el seguimiento. Desde ahí puedes descargar:" },
+  { tipo: "parrafo", texto: "Cada sesión muestra el resumen, los hallazgos y el seguimiento. Desde ahí puedes descargar:" },
   { tipo: "vinetas", items: [
-    "Minuta en PDF y en Word, con la fecha de la sesión en el nombre.",
+    "Minuta en PDF y en Word, con la fecha de la sesión en el nombre. Siempre lleva las mismas secciones: resumen, hallazgos, compromisos, tareas de aplicación y seguimiento.",
     "Ficha del alumno: una hoja con su proyecto detonador, compromisos y temas vistos.",
     "+ Calendario: agrega esa sesión a tu calendario.",
+    "Junta técnica en PowerPoint: pregunta si la quieres “de este alumno” o “de todo el grupo”. Usa la minuta corregida, no los hallazgos originales.",
   ]},
 
   { tipo: "seccion", texto: "7 · Hablar con el agente" },
-  { tipo: "parrafo", texto: "En la ficha del alumno hay un chat. Úsalo para preguntar por el caso o para corregir lo que el agente entendió mal." },
+  { tipo: "parrafo", texto: "En la ficha del alumno hay un chat. Sirve para preguntar por el caso y para corregir lo que el agente entendió mal." },
   { tipo: "vinetas", items: [
     "Pregunta lo que necesites: “¿qué compromisos quedaron abiertos?”, “¿qué reviso en la siguiente sesión?”.",
-    "Si algo está mal, díselo: “corrige la minuta: el compromiso es entregar el estado de resultados el 5 de noviembre”.",
-    "Cuando el agente detecta la corrección, aplica el cambio a la minuta y te avisa. Si no lo detecta, usa el botón “Aplicar el chat a la minuta” en la sesión.",
-    "El chat recuerda la conversación: no tienes que repetir el contexto.",
+    "Para corregir: “actualiza la minuta: el compromiso es entregar el estado de resultados el 5 de noviembre”. El agente la reescribe y avisa.",
+    "Para tareas: “la tarea del estado de resultados ya se entregó”. Queda marcada con su fecha.",
+    "El chat recuerda la conversación: no repitas el contexto.",
+    "Si el agente no aplica el cambio, cada sesión tiene el botón “Aplicar el chat a la minuta”.",
   ]},
 
-  { tipo: "seccion", texto: "8 · Tareas de aplicación" },
-  { tipo: "parrafo", texto: "En la ficha del alumno aparece la lista de tareas del mes con su palomita. Se marca sola cuando la tarea se detecta en la transcripción; si falta alguna, dile al agente y se actualiza." },
+  { tipo: "seccion", texto: "8 · Brief de contexto (deep research)" },
+  { tipo: "parrafo", texto: "En la ficha del alumno hay un botón “Generar brief”. Investiga la empresa y su industria en internet y escribe un documento de una a dos páginas con fuentes, para que llegues preparado a la primera sesión." },
+  { tipo: "vinetas", items: [
+    "Tarda entre 20 y 30 segundos. No cierres la página mientras investiga.",
+    "Necesita que el alumno tenga empresa registrada.",
+    "Cuando está listo puedes descargarlo en PDF. Sirve para cambiar el foco y volver a generarlo.",
+    "Es contexto, no diagnóstico: no se comparte con el alumno ni se cita en la sesión.",
+  ]},
 
-  { tipo: "seccion", texto: "9 · Tu calendario" },
+  { tipo: "seccion", texto: "9 · Tareas de aplicación" },
+  { tipo: "parrafo", texto: "La ficha del alumno muestra la lista de tareas del mes con su palomita. Se marca sola cuando el agente la detecta en la transcripción, o cuando se lo dices por el chat." },
+
+  { tipo: "seccion", texto: "10 · Tu calendario" },
   { tipo: "pasos", items: [
     "En Mi cuenta, copia la “Liga de tu calendario CEDEM”.",
     "En Google Calendar entra a Configuración (el engrane).",
-    "En la barra lateral elige Añadir calendario / Desde URL.",
+    "En la barra lateral elige Añadir calendario y luego Desde URL.",
     "Pega la liga y confirma.",
   ]},
-  { tipo: "nota", texto: "Google tarda en actualizarlo: entre dos y tres horas, a veces más. No hay botón para forzarlo. Para algo inmediato, usa “+ Calendario” en la sesión." },
+  { tipo: "nota", texto: "Google tarda entre dos y tres horas en actualizarlo, a veces más; no hay botón para forzarlo. Para algo inmediato usa “+ Calendario” en la sesión." },
 
-  { tipo: "seccion", texto: "Qué probar hoy" },
-  { tipo: "prueba", texto: "Recorrido completo", items: [
-    "Entrar con tu cuenta y cambiar tu liga de Zoom.",
-    "Registrar un alumno sin proyecto detonador.",
-    "Agendar una sesión y verla aparecer en Inicio.",
+  { tipo: "seccion", texto: "Prueba completa, en orden" },
+  { tipo: "prueba", texto: "Marca cada punto cuando funcione", items: [
+    "Entrar con tu cuenta y cambiar tu liga de Zoom en Mi cuenta.",
+    "Registrar un alumno sin proyecto detonador y editarlo después.",
+    "Agendar una sesión y verla en Inicio con su botón de Zoom.",
     "Subir una transcripción eligiendo esa sesión agendada.",
-    "Esperar el análisis y leer el resumen y los hallazgos.",
-    "Descargar la minuta PDF y la ficha.",
-    "Pedirle algo al agente y luego corregirle algo.",
-    "Marcar el visto bueno o reportar lo que no cuadre.",
+    "Comprobar que la sesión desaparece de “Próximas sesiones”.",
+    "Leer el resumen y los hallazgos, y descargar la minuta PDF y la Word.",
+    "Ver que la minuta trae tareas de aplicación y seguimiento.",
+    "Descargar la ficha del alumno y la junta técnica de un alumno y del grupo.",
+    "Generar el brief de contexto y abrir el PDF.",
+    "Pedirle algo al agente y luego corregirle la minuta por chat.",
+    "Decirle que una tarea ya se entregó y ver la palomita.",
+    "Agendar un Consejo y verlo en Inicio.",
   ]},
 
-  { tipo: "seccion", texto: "Qué observar" },
+  { tipo: "seccion", texto: "Qué observar mientras pruebas" },
   { tipo: "vinetas", items: [
     "¿El resumen refleja la sesión o inventa cosas?",
-    "¿Los compromisos tienen la fecha correcta?",
-    "¿Las tareas de aplicación que se hablaron aparecen marcadas?",
+    "¿Los compromisos traen la fecha correcta?",
+    "¿Las tareas que se hablaron quedaron marcadas?",
     "¿La minuta se ve presentable para mandarla al alumno?",
+    "¿El brief sirve para llegar preparado, o se queda en generalidades?",
     "¿Falta algo que tú escribirías siempre en una minuta?",
   ]},
+  { tipo: "nota", texto: "Si algo falla, anota qué botón, en qué alumno y qué decía la pantalla. Con eso se reproduce y se corrige." },
 ];
+
 
 const ADMIN = [
   { tipo: "parrafo", texto: "Guía de administración de CEDEM Coach. Desde aquí se crean las cuentas, se carga el conocimiento de la firma y se supervisa el trabajo de los coaches." },
@@ -289,6 +309,8 @@ const ADMIN = [
   { tipo: "seccion", texto: "3 · Alumnos y bajas" },
   { tipo: "vinetas", items: [
     "El admin ve los alumnos de todos los coaches.",
+    "Al registrar un alumno eliges qué coach lo acompaña: el alumno queda en su cuenta, no en la tuya.",
+    "Si subes o agendas una sesión como admin, queda a nombre del coach del alumno.",
     "Dar de baja: en la ficha del alumno, botón “Dar de baja”. Deja de aparecer a los coaches y conserva todo su historial.",
     "Reactivar: el mismo botón cambia a “Reactivar”.",
   ]},
