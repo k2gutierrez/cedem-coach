@@ -57,10 +57,13 @@ export default function FormularioSubida({
     setFase("inicio");
   }, [setFase]);
 
-  const suyas = pendientes.filter((p) => p.alumno_id === alumnoId && p.tipo !== "consejo");
+  const esConsejo = alumnoId === "__consejo";
+  const suyas = pendientes.filter((p) =>
+    esConsejo ? p.tipo === "consejo" : p.alumno_id === alumnoId && p.tipo !== "consejo"
+  );
 
   useEffect(() => {
-    setSesionElegida(suyas[0]?.id ?? "");
+    setSesionElegida(suyas[0]?.id ?? "nueva");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alumnoId]);
 
@@ -100,8 +103,6 @@ export default function FormularioSubida({
     if (!alumnoId) return setError("Elige el alumno o Consejo.");
     if (!file) return setError("Elige el archivo de la sesión.");
 
-    const esConsejo = alumnoId === "__consejo";
-
     try {
       if (file.size > DIRECTO_DESDE) {
         // Archivo pesado: primero a Storage, luego se procesa.
@@ -132,7 +133,7 @@ export default function FormularioSubida({
             nombre: file.name,
             alumnoId: esConsejo ? "" : alumnoId,
             tipo: esConsejo ? "consejo" : "individual",
-            ...(sesionElegida ? { sesionId: sesionElegida } : {}),
+            ...(sesionElegida && sesionElegida !== "nueva" ? { sesionId: sesionElegida } : {}),
             fecha,
           },
           true
@@ -149,7 +150,7 @@ export default function FormularioSubida({
       datos.set("alumnoId", esConsejo ? "" : alumnoId);
       datos.set("tipo", esConsejo ? "consejo" : "individual");
       datos.set("fecha", fecha);
-      if (sesionElegida) datos.set("sesionId", sesionElegida);
+      if (sesionElegida && sesionElegida !== "nueva") datos.set("sesionId", sesionElegida);
       datos.set("archivo", file);
 
       const { ok, datos: respuesta } = await procesar(datos, false);
@@ -171,7 +172,7 @@ export default function FormularioSubida({
   const terminar = (id?: string | null) => {
     setFase("listo");
     toast.success("Sesión guardada. El agente la está analizando…");
-    router.push(id ? `/alumnos/?nueva=1` : "/");
+    router.push(id ? `/alumnos/${id}?nueva=1` : "/");
   };
 
   const trabajando = fase === "enviando" || fase === "subiendo" || fase === "analizando" || fase === "listo";
@@ -199,7 +200,28 @@ export default function FormularioSubida({
           </select>
         </div>
 
-        {!sesionElegida && (
+        {suyas.length > 0 ? (
+          <div className="campo">
+            <label htmlFor="sesion">Sesión sin transcripción</label>
+            <select
+              id="sesion"
+              value={sesionElegida}
+              onChange={(e) => setSesionElegida(e.target.value)}
+            >
+              {suyas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.fecha}
+                  {p.hora ? ` · ${p.hora.slice(0, 5)}` : ""} ·{" "}
+                  {p.tipo === "consejo" ? "Consejo" : "Coaching individual"}
+                </option>
+              ))}
+              <option value="nueva">Otra fecha (sesión nueva)</option>
+            </select>
+            <span className="text-sm text-[var(--texto-suave)]">
+              Solo aparecen las que agendaste y aún no tienen transcripción.
+            </span>
+          </div>
+        ) : (
           <div className="campo">
             <label htmlFor="fecha">Fecha de la sesión</label>
             <input id="fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
@@ -207,25 +229,15 @@ export default function FormularioSubida({
         )}
       </div>
 
-      {suyas.length > 0 && (
-        <div className="campo">
-          <label htmlFor="sesion">¿Es una de tus sesiones agendadas?</label>
-          <select
-            id="sesion"
-            value={sesionElegida}
-            onChange={(e) => setSesionElegida(e.target.value)}
-          >
-            {suyas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.fecha}
-                {p.hora ? ` · ${p.hora.slice(0, 5)}` : ""} · Coaching individual
-              </option>
-            ))}
-            <option value="">Otra fecha (la de arriba)</option>
-          </select>
-          <span className="text-sm text-[var(--texto-suave)]">
-            Si eliges una agendada, esa sesión se marca como realizada y conserva su fecha.
-          </span>
+      {suyas.length > 0 && sesionElegida === "nueva" && (
+        <div className="campo sm:max-w-xs">
+          <label htmlFor="fecha-nueva">Fecha de la sesión</label>
+          <input
+            id="fecha-nueva"
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+          />
         </div>
       )}
 

@@ -219,7 +219,7 @@ const COACH = [
   { tipo: "seccion", texto: "5 · Subir la sesión" },
   { tipo: "pasos", items: [
     "Entra a Subir sesión y elige al alumno.",
-    "Si tenía sesiones agendadas, aparece un selector: escoge la que corresponde. Así esa sesión se completa, conserva su fecha y no se duplica.",
+    "A su lado aparece el selector “Sesión sin transcripción” con las que agendaste y aún no tienen archivo. Escoge la que corresponde: se completa, conserva su fecha y no se duplica.",
     "Si no estaba agendada, elige “Otra fecha”.",
     "Sube el archivo: transcripción de Zoom (.vtt), PDF, Word, audio o foto de tus notas.",
     "Pulsa Analizar la sesión. Primero se guarda el texto y después el agente lo analiza.",
