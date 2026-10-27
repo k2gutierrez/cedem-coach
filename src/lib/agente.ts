@@ -1,4 +1,5 @@
 import { ErrorIngesta } from "./extraer";
+import { muestraTranscripcion } from "./retrieval";
 
 const URL_API = "https://api.deepseek.com/chat/completions";
 
@@ -84,7 +85,7 @@ ${listaTareas}
 
 Transcripción de la sesión:
 """
-${transcripcion.slice(0, 8000)}
+${muestraTranscripcion(transcripcion, 18000)}
 """`;
 
   const r = await fetch(URL_API, {

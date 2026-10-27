@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { usuarioActual } from "@/lib/sesion";
 import { tareasConCobertura } from "@/lib/datos";
+import { fragmentosDeTranscripcion } from "@/lib/retrieval";
 
 export const maxDuration = 60;
 
@@ -14,6 +15,9 @@ Reglas:
 - Responde en español de México, claro y breve (máximo 8 líneas salvo que pidan detalle).
 - Usa solo la información del contexto. Si no está, dilo y sugiere qué subir o revisar.
 - Cita de dónde sale: "según la sesión del 12 de octubre" o "según el material: Clase 3".
+- Cuando la pregunta sea sobre algo que se dijo en una sesión, usa los FRAGMENTOS TEXTUALES de las
+  transcripciones que van en el contexto y cítalos. Si el dato no aparece ahí, di que no lo
+  encontraste en lo consultado; nunca digas que el texto "está truncado".
 - No inventes datos de alumnos ni cifras.
 - Cuando te pregunten qué hacer, propón 2 o 3 acciones concretas y deja la decisión al coach.
 - Si el coach te corrige o te da información nueva del caso, acéptala y tenla en cuenta en lo que
@@ -182,6 +186,16 @@ export async function POST(req: Request) {
 
     if (ultimaSesion) {
       lineas.push("", `SESIÓN MÁS RECIENTE DEL ALUMNO: ${ultimaSesion.fecha} (id ${ultimaSesion.id})`);
+    }
+
+    const fragmentos = await fragmentosDeTranscripcion(alumnoId, ultima, 4);
+    if (fragmentos.length) {
+      lineas.push("", "FRAGMENTOS TEXTUALES DE LAS TRANSCRIPCIONES:");
+      for (const f of fragmentos) {
+        lineas.push(`— Sesión del ${f.fecha}:`);
+        lineas.push(f.texto);
+        lineas.push("");
+      }
     }
 
     const tareas = await tareasConCobertura(alumnoId);
