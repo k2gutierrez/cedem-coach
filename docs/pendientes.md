@@ -23,10 +23,21 @@ llegue el guión.
 
 ## 2 · Deep research al dar de alta
 
-- Al registrar un alumno, investigar su empresa e industria y entregar un PDF al coach para que
-  llegue preparado a la primera sesión.
-- Lorena se comprometió a pasar el prompt. Sin él, se puede hacer una versión genérica.
-- Decidir si ese PDF se guarda en la base o solo se descarga.
+Lorena ya mandó el prompt completo y un brief de ejemplo (Productos Avilés). Validado lo técnico:
+
+- **Funciona con la llave de DeepSeek que ya tenemos**, sin proveedor nuevo: su API compatible con
+  Anthropic acepta la herramienta `web_search_20250305` y devuelve resultados reales con fuentes.
+- **El problema es el tiempo**: un brief completo tarda 35 a 60 segundos y Amplify corta a los 30.
+
+Plan para que quepa en el límite, en dos pasos desde el navegador:
+
+1. `buscar`: una llamada de búsqueda que devuelve hechos y fuentes (10-15 s).
+2. `redactar`: una segunda llamada, sin búsqueda, que escribe el brief con el prompt de Lorena y
+   lo guarda (10-15 s).
+
+Guardar en `alumnos.brief` (texto), `brief_fuentes` (jsonb) y `brief_actualizado` (fecha).
+Botón "Generar brief" en la ficha del alumno + descarga en PDF. No se genera solo al dar de alta
+para no bloquear el registro.
 
 ## 3 · Tareas de aplicación
 
