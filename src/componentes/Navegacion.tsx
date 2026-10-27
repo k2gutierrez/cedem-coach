@@ -36,7 +36,7 @@ export default function Navegacion({
             width={120}
             height={53}
             priority
-            style={{ height: 34, width: "auto" }}
+            style={{ height: 34, width: 77 }}
           />
           <span className="leading-tight">
             <span className="block text-[1.05rem] font-bold tracking-tight text-[var(--azul)]">MIEEF Coach</span>

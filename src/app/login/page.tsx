@@ -12,14 +12,14 @@ export default async function Login() {
   return (
     <main className="flex min-h-screen items-center justify-center px-5 py-10">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex flex-col gap-4">
+        <div className="mb-8 flex flex-col items-start gap-4">
           <Image
             src="/mief.png"
             alt="Euncet Business School · UPC · CEDEM"
-            width={280}
-            height={124}
+            width={400}
+            height={177}
             priority
-            style={{ height: 78, width: "auto" }}
+            style={{ height: 80, width: 181 }}
           />
           <p className="text-[0.95rem] leading-snug text-[var(--texto-suave)]">{PROGRAMA}</p>
         </div>
