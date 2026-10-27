@@ -14,6 +14,19 @@ export type Hallazgo = { titulo: string; detalle?: string | null; cita?: string 
 export type Compromiso = { texto: string; responsable?: string | null; fecha?: string | null };
 export type Coach = { nombre: string; email: string };
 
+
+/** WinAnsi no soporta varios signos que el modelo usa; se normalizan. */
+function aWinAnsi(t: string): string {
+  return String(t)
+    .replace(/[\u2212\u2013\u2014]/g, "-")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2192\u21D2]/g, "->")
+    .replace(/\u2026/g, "...")
+    .replace(/[\u00A0\u202F]/g, " ")
+    .replace(/[^\x00-\xFF]/g, "");
+}
+
 const AZUL = rgb(0.043, 0.184, 0.42);
 const CIAN = rgb(0.055, 0.604, 0.839);
 const GRIS = rgb(0.33, 0.38, 0.48);
@@ -85,7 +98,7 @@ export async function minutaPDF({
     const size = opciones.size ?? 10.5;
     const font = opciones.font ?? normal;
     const salto = opciones.salto ?? size * 1.45;
-    const palabras = String(cadena || "").split(/\s+/);
+    const palabras = aWinAnsi(String(cadena || "")).split(/\s+/);
     let linea = "";
 
     for (const palabra of palabras) {
@@ -643,7 +656,7 @@ export async function briefPDF({
     const { size = 10.5, font = normal, color = NEGRO, sangria = 0 } = opciones;
     const espacio = UTIL - sangria;
     const interlinea = size * 1.42;
-    const limpio = cadena.replace(/\*\*/g, "").replace(/`/g, "");
+    const limpio = aWinAnsi(cadena.replace(/\*\*/g, "").replace(/`/g, ""));
     const palabras = limpio.split(/\s+/).filter(Boolean);
     let linea = "";
 
@@ -696,6 +709,12 @@ export async function briefPDF({
       asegurar(30);
       y -= 6;
       escribir(linea.replace(/^#{1,2}\s*/, ""), { size: 13, font: negrita, color: AZUL });
+      y -= 2;
+    } else if (/^\d+\.\s+[A-ZÁÉÍÓÚ]/.test(linea) && linea.length < 60) {
+      // Encabezados numerados del brief ("1. Ficha rápida")
+      asegurar(28);
+      y -= 4;
+      escribir(linea, { size: 12, font: negrita, color: AZUL });
       y -= 2;
     } else if (/^#{3}\s/.test(linea)) {
       asegurar(24);

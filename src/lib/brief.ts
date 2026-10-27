@@ -37,10 +37,31 @@ ESTRUCTURA DEL BRIEF
 7. Glosario del sector: 8 a 12 términos con definición breve.
 8. Fuentes consultadas con enlace.
 
+FORMATO DE SALIDA
+- Empieza directamente en "1. Ficha rápida". Sin título propio, sin introducción.
+- No narres lo que vas a hacer ni lo que encontraste ("voy a buscar", "confirmada la empresa").
+- No uses separadores como --- ni bloques de código.
+
 ESTILO
 - Español claro y directo. Extensión total: 1 a 2 páginas.
 - Tono neutral: no juzgues a la empresa ni a la familia.
 - No hagas recomendaciones de negocio ni sugieras preguntas para la sesión.`;
+
+
+/** Quita la narración previa y los separadores que el modelo a veces agrega. */
+function limpiarBrief(texto: string): string {
+  const lineas = texto.split(/\r?\n/);
+
+  // Se descarta todo lo anterior al primer encabezado del brief.
+  let inicio = lineas.findIndex((l) => /^(#{1,3}\s|\*\*?1\.?\s*1?\.?\s*Ficha|1\.\s*Ficha)/i.test(l.trim()));
+  if (inicio < 0) inicio = 0;
+
+  return lineas
+    .slice(inicio)
+    .filter((l) => !/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l))
+    .join("\n")
+    .trim();
+}
 
 function datosDelAlumno(alumno: {
   nombre: string;
@@ -128,16 +149,18 @@ export async function generarBrief(alumnoId: string): Promise<{ ok: true; brief:
     }
   }
 
-  if (texto.length < 400) {
+  const limpio = limpiarBrief(texto);
+
+  if (limpio.length < 400) {
     return { ok: false, error: "El agente no alcanzó a escribir el brief. Intenta de nuevo." };
   }
 
   const { error } = await db
     .from("alumnos")
-    .update({ brief: texto, brief_fuentes: fuentes, brief_actualizado: new Date().toISOString() })
+    .update({ brief: limpio, brief_fuentes: fuentes, brief_actualizado: new Date().toISOString() })
     .eq("id", alumnoId);
 
   if (error) return { ok: false, error: `No se pudo guardar: ${error.message}` };
 
-  return { ok: true, brief: { texto, fuentes } };
+  return { ok: true, brief: { texto: limpio, fuentes } };
 }
