@@ -6,7 +6,13 @@ import { crearAlumno, type Estado } from "@/acciones";
 
 const INICIAL: Estado = {};
 
-export default function FormularioAlumno({ abierto = false }: { abierto?: boolean }) {
+export default function FormularioAlumno({
+  abierto = false,
+  coaches = [],
+}: {
+  abierto?: boolean;
+  coaches?: { id: string; nombre: string }[];
+}) {
   const [estado, enviar, pendiente] = useActionState(crearAlumno, INICIAL);
   const form = useRef<HTMLFormElement>(null);
 
@@ -38,8 +44,21 @@ export default function FormularioAlumno({ abierto = false }: { abierto?: boolea
           <input id="cargo" name="cargo" placeholder="Fundadora y CEO" />
         </div>
 
+        {coaches.length > 0 && (
+          <div className="campo sm:col-span-2">
+            <label htmlFor="coachId">¿Qué coach lo acompaña?</label>
+            <select id="coachId" name="coachId" defaultValue={coaches[0]?.id ?? ""}>
+              {coaches.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="campo sm:col-span-2">
-          <label htmlFor="reto">Reto principal</label>
+          <label htmlFor="reto">Proyecto detonador (opcional)</label>
           <input id="reto" name="reto" placeholder="Crecer sin perder el margen" />
         </div>
 

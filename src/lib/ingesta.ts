@@ -76,7 +76,8 @@ export async function guardarArchivo({
   }
 
   const datos = {
-    coach_id: usuario.id,
+    // La sesión pertenece al coach del alumno; si quien sube es admin, no se la queda.
+    coach_id: esConsejo ? usuario.id : (alumno?.coach_id ?? usuario.id),
     alumno_id: esConsejo ? null : alumnoId,
     tipo: esConsejo ? "consejo" : "individual",
     fecha: fechaFinal,

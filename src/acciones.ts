@@ -45,7 +45,8 @@ export async function crearAlumno(_prev: Estado, formData: FormData): Promise<Es
     ciudad: String(formData.get("ciudad") || "").trim() || null,
     generacion: String(formData.get("generacion") || "").trim() || null,
     reto: String(formData.get("reto") || "").trim() || null,
-    coach_id: usuario.id,
+    coach_id:
+      usuario.rol === "admin" ? String(formData.get("coachId") || usuario.id) : usuario.id,
   });
 
   if (error) return { error: `No se pudo guardar: ${error.message}` };
@@ -102,7 +103,7 @@ export async function subirSesion(_prev: Estado, formData: FormData): Promise<Es
     });
 
     const datos = {
-      coach_id: usuario.id,
+      coach_id: alumno.coach_id,
       alumno_id: alumnoId,
       tipo: "individual",
       fecha,
@@ -311,7 +312,7 @@ export async function agendarSesion(_prev: Estado, formData: FormData): Promise<
     const { data: creada, error } = await db
       .from("sesiones")
       .insert({
-        coach_id: usuario.id,
+        coach_id: alumno.coach_id,
         alumno_id: alumnoId,
         tipo,
         fecha,

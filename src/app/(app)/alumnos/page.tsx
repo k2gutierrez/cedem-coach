@@ -1,11 +1,12 @@
 import Link from "next/link";
 import FormularioAlumno from "@/componentes/FormularioAlumno";
-import { alumnosDe } from "@/lib/datos";
+import { alumnosDe, listarCoaches } from "@/lib/datos";
 import { usuarioDePagina } from "@/lib/sesion";
 
 export default async function Alumnos() {
   const usuario = await usuarioDePagina();
   const alumnos = await alumnosDe(usuario);
+  const coaches = usuario.rol === "admin" ? await listarCoaches() : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,7 +24,7 @@ export default async function Alumnos() {
         </Link>
       </header>
 
-      <FormularioAlumno abierto={alumnos.length === 0} />
+      <FormularioAlumno abierto={alumnos.length === 0} coaches={coaches} />
 
       {alumnos.length > 0 && (
         <ul className="grid gap-4 sm:grid-cols-2">

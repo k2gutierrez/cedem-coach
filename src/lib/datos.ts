@@ -284,3 +284,13 @@ export async function sesionesPendientes(u: Usuario): Promise<Pendiente[]> {
   const { data } = await consulta;
   return (data ?? []) as Pendiente[];
 }
+
+/** Coaches activos, para que el admin asigne alumnos. */
+export async function listarCoaches(): Promise<{ id: string; nombre: string }[]> {
+  const { data } = await db
+    .from("coaches")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("nombre");
+  return (data ?? []) as { id: string; nombre: string }[];
+}
