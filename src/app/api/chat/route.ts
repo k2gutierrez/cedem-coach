@@ -111,6 +111,38 @@ function tareasQueSeHicieron(mensaje: string, tareas: { id: string; titulo: stri
   return encontradas;
 }
 
+
+const MESES: Record<string, string> = {
+  enero: "01", febrero: "02", marzo: "03", abril: "04", mayo: "05", junio: "06",
+  julio: "07", agosto: "08", septiembre: "09", setiembre: "09", octubre: "10",
+  noviembre: "11", diciembre: "12",
+};
+
+/** Detecta una fecha en el mensaje: "15 de octubre", "15/10" o "2026-10-15". */
+function fechaMencionada(texto: string): { iso?: string; dia?: string; mes?: string } | null {
+  const t = texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const iso = t.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return { iso: `${iso[1]}-${iso[2]}-${iso[3]}` };
+
+  const largo = t.match(/(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)/);
+  if (largo) return { dia: largo[1].padStart(2, "0"), mes: MESES[largo[2]] };
+
+  const corto = t.match(/\b(\d{1,2})[/-](\d{1,2})(?:[/-]\d{2,4})?\b/);
+  if (corto) return { dia: corto[1].padStart(2, "0"), mes: corto[2].padStart(2, "0") };
+
+  return null;
+}
+
+function coincideFecha(fecha: string, m: { iso?: string; dia?: string; mes?: string }) {
+  if (m.iso) return fecha === m.iso;
+  const [, mes, dia] = fecha.split("-");
+  return mes === m.mes && dia === m.dia;
+}
+
 export async function POST(req: Request) {
   const usuario = await usuarioActual();
   if (!usuario) return NextResponse.json({ error: "sin_sesion" }, { status: 401 });
@@ -206,6 +238,16 @@ export async function POST(req: Request) {
       : ["(sin resultados para esta pregunta)"]),
   ];
 
+  // Si el coach pide actualizar una sesión concreta, se detecta aquí mismo.
+  const mencion = fechaMencionada(ultima);
+  const sesionMencionada = mencion
+    ? (sesiones ?? []).find((ses) => coincideFecha(String(ses.fecha), mencion))
+    : null;
+  const quiereActualizar = /(actualiza|corrige|modifica|ajusta|cambia)/.test(
+    ultima.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  );
+  const ajusteDirecto = quiereActualizar && sesionMencionada?.id ? String(sesionMencionada.id) : null;
+
   let tareasParaMarcar: string[] = [];
 
   // Memoria: la conversación previa, de este alumno o del chat general.
@@ -236,6 +278,13 @@ export async function POST(req: Request) {
 
     if (ultimaSesion) {
       lineas.push("", `SESIÓN MÁS RECIENTE DEL ALUMNO: ${ultimaSesion.fecha} (id ${ultimaSesion.id})`);
+    }
+
+    if (sesionMencionada?.id) {
+      lineas.push(
+        "",
+        `EL COACH MENCIONA LA SESIÓN DEL ${sesionMencionada.fecha} (id ${sesionMencionada.id}). Si pide corregirla, es esa.`
+      );
     }
 
     const fragmentos = await fragmentosDeTranscripcion(alumnoId, ultima, 4);
@@ -316,6 +365,10 @@ export async function POST(req: Request) {
             if (!linea) continue;
             const dato = linea.slice(6).trim();
             if (dato === "[DONE]") {
+              if (ajusteDirecto) {
+                control.enqueue(codificador.encode(`\n[[ACCION:minuta:${ajusteDirecto}]]`));
+              }
+
               if (tareasParaMarcar.length) {
                 control.enqueue(
                   codificador.encode(

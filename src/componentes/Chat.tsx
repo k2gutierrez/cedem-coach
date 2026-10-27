@@ -13,7 +13,8 @@ const SUGERENCIAS = [
   "¿Qué dice la metodología sobre el margen?",
 ];
 
-const RE_ACCION = /\[\[ACCION:[a-z-]+\]\]/gi;
+const RE_ACCION = /\[\[ACCION:[a-z-]+(?::[0-9a-fA-F-]{36})?\]\]/gi;
+const RE_MINUTA = /\[\[ACCION:minuta(?::([0-9a-fA-F-]{36}))?\]\]/i;
 const RE_TAREA = /\[\[TAREA:([0-9a-fA-F-]{36})\]\]/g;
 
 const limpiar = (t: string) =>
@@ -93,9 +94,13 @@ export default function Chat({
         }
       }
 
-      if (/\[\[ACCION:minuta\]\]/i.test(acumulado) && sesionId) {
+      const conId = acumulado.match(/\[\[ACCION:minuta:([0-9a-fA-F-]{36})\]\]/);
+      const generico = /\[\[ACCION:minuta\]\]/i.test(acumulado);
+      const idMinuta = conId?.[1] ?? (generico ? sesionId : null);
+
+      if (idMinuta) {
         toast.info("Aplicando los cambios a la minuta…");
-        const ajuste = await fetch(`/api/sesiones/${sesionId}/ajustar`, { method: "POST" });
+        const ajuste = await fetch(`/api/sesiones/${idMinuta}/ajustar`, { method: "POST" });
         if (ajuste.ok) {
           toast.success("Minuta actualizada con lo que platicaron.");
           router.refresh();
