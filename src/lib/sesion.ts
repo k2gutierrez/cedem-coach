@@ -54,17 +54,22 @@ export const usuarioActual = cache(async (): Promise<Usuario | null> => {
   const token = store.get(COOKIE)?.value;
   if (!token) return null;
 
-  const { data, error } = await db.auth.getUser(token);
-  if (error || !data.user) return null;
+  try {
+    const { data, error } = await db.auth.getUser(token);
+    if (error || !data.user) return null;
 
-  const { data: perfil } = await db
-    .from("coaches")
-    .select("id, nombre, email, rol, zoom_url, activo")
-    .eq("id", data.user.id)
-    .maybeSingle();
+    const { data: perfil } = await db
+      .from("coaches")
+      .select("id, nombre, email, rol, zoom_url, activo")
+      .eq("id", data.user.id)
+      .maybeSingle();
 
-  if (!perfil || perfil.activo === false) return null;
-  return (perfil as Usuario & { activo?: boolean }) ?? null;
+    if (!perfil || perfil.activo === false) return null;
+    return (perfil as Usuario & { activo?: boolean }) ?? null;
+  } catch {
+    // Un fallo momentáneo de red o de la base no debe tumbar la página.
+    return null;
+  }
 });
 
 /** Para páginas y acciones que exigen sesión. */

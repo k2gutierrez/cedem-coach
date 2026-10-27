@@ -43,6 +43,7 @@ export async function crearAlumno(_prev: Estado, formData: FormData): Promise<Es
     empresa: String(formData.get("empresa") || "").trim() || null,
     cargo: String(formData.get("cargo") || "").trim() || null,
     ciudad: String(formData.get("ciudad") || "").trim() || null,
+    giro: String(formData.get("giro") || "").trim() || null,
     generacion: String(formData.get("generacion") || "").trim() || null,
     reto: String(formData.get("reto") || "").trim() || null,
     coach_id:
@@ -366,7 +367,7 @@ export async function actualizarCuenta(_prev: Estado, formData: FormData): Promi
       if (errorClave) return { error: `No se pudo cambiar la contraseña: ${errorClave.message}` };
     }
 
-    revalidatePath("/", "layout");
+    revalidatePath("/cuenta");
     return { ok: clave ? "Datos y contraseña actualizados." : "Datos actualizados." };
   } catch {
     return { error: "No se pudo guardar. Intenta de nuevo." };
@@ -395,6 +396,8 @@ export async function editarAlumno(_prev: Estado, formData: FormData): Promise<E
         nombre,
         empresa: String(formData.get("empresa") || "").trim() || null,
         cargo: String(formData.get("cargo") || "").trim() || null,
+        ciudad: String(formData.get("ciudad") || "").trim() || null,
+        giro: String(formData.get("giro") || "").trim() || null,
         reto: String(formData.get("reto") || "").trim() || null,
       })
       .eq("id", id);

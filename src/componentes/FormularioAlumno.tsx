@@ -44,6 +44,16 @@ export default function FormularioAlumno({
           <input id="cargo" name="cargo" placeholder="Fundadora y CEO" />
         </div>
 
+        <div className="campo">
+          <label htmlFor="ciudad">Ciudad</label>
+          <input id="ciudad" name="ciudad" placeholder="Guadalajara, Jal." />
+        </div>
+
+        <div className="campo">
+          <label htmlFor="giro">Giro</label>
+          <input id="giro" name="giro" placeholder="Alimentos envasados" />
+        </div>
+
         {coaches.length > 0 && (
           <div className="campo sm:col-span-2">
             <label htmlFor="coachId">¿Qué coach lo acompaña?</label>

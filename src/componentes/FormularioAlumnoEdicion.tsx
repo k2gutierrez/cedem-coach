@@ -9,7 +9,15 @@ const INICIAL: Estado = {};
 export default function FormularioAlumnoEdicion({
   alumno,
 }: {
-  alumno: { id: string; nombre: string; empresa: string | null; cargo: string | null; reto: string | null };
+  alumno: {
+    id: string;
+    nombre: string;
+    empresa: string | null;
+    cargo: string | null;
+    ciudad: string | null;
+    giro: string | null;
+    reto: string | null;
+  };
 }) {
   const [estado, enviar, pendiente] = useActionState(editarAlumno, INICIAL);
 
@@ -38,6 +46,16 @@ export default function FormularioAlumnoEdicion({
         <div className="campo">
           <label htmlFor="ed-cargo">Puesto</label>
           <input id="ed-cargo" name="cargo" defaultValue={alumno.cargo ?? ""} />
+        </div>
+
+        <div className="campo">
+          <label htmlFor="ed-ciudad">Ciudad</label>
+          <input id="ed-ciudad" name="ciudad" defaultValue={alumno.ciudad ?? ""} />
+        </div>
+
+        <div className="campo">
+          <label htmlFor="ed-giro">Giro</label>
+          <input id="ed-giro" name="giro" defaultValue={alumno.giro ?? ""} />
         </div>
 
         <div className="campo sm:col-span-2">
