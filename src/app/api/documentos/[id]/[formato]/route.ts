@@ -156,33 +156,64 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     });
   }
 
-  // Presentación de junta técnica
-  const { data: recientes } = await db
+  // Presentación de junta técnica: de un alumno o de todo el grupo.
+  const alcance = new URL(_req.url).searchParams.get("alcance") === "alumno" ? "alumno" : "grupo";
+
+  let consulta = db
     .from("sesiones")
-    .select("id, fecha, resumen_ejecutivo, nota_coach, alumno_id, alumnos(nombre, empresa, cargo, reto)")
-    .eq("coach_id", sesion.coach_id)
+    .select("id, fecha, resumen_ejecutivo, nota_coach, minuta_ajustada, estado, alumno_id, alumnos(nombre, empresa, cargo, reto)")
     .order("fecha", { ascending: false })
     .limit(5);
 
+  if (alcance === "alumno") {
+    if (!alumno) return NextResponse.json({ error: "sesion_sin_alumno" }, { status: 400 });
+    consulta = consulta.eq("alumno_id", alumno.id).eq("estado", "realizada");
+  } else {
+    consulta = consulta.eq("coach_id", sesion.coach_id);
+  }
+
+  const { data: recientes } = await consulta;
+
+  type Ajuste = { resumen?: string; hallazgos?: { titulo: string; detalle: string; cita?: string }[] };
+
   const casos = [];
   for (const s of recientes ?? []) {
-    const { data: hs } = await db.from("hallazgos").select("titulo, detalle, cita").eq("sesion_id", s.id).limit(4);
+    const ajuste = (s.minuta_ajustada ?? null) as Ajuste | null;
+
+    const { data: hs } =
+      ajuste?.hallazgos?.length
+        ? { data: ajuste.hallazgos }
+        : await db.from("hallazgos").select("titulo, detalle, cita").eq("sesion_id", s.id).limit(4);
+
+    const persona =
+      (s.alumnos as unknown as { nombre: string; empresa: string | null; cargo: string | null; reto: string | null }) ??
+      { nombre: "Alumno" };
+
     casos.push({
-      alumno:
-        (s.alumnos as unknown as { nombre: string; empresa: string | null; cargo: string | null; reto: string | null }) ?? {
-          nombre: "Alumno",
-        },
-      sesion: { fecha: s.fecha, resumen_ejecutivo: s.resumen_ejecutivo, nota_coach: s.nota_coach },
+      alumno: persona,
+      sesion: {
+        fecha: s.fecha,
+        resumen_ejecutivo: ajuste?.resumen ?? s.resumen_ejecutivo,
+        nota_coach: s.nota_coach,
+      },
       hallazgos: hs ?? [],
     });
   }
 
-  const pptx = await presentacionPPTX({ coach, casos });
+  const pptx = await presentacionPPTX({
+    coach,
+    casos,
+    titulo: alcance === "alumno" ? "Junta técnica · caso" : "Junta técnica",
+    subtitulo:
+      alcance === "alumno"
+        ? `${alumno?.nombre ?? "Alumno"} · ${coach.nombre}`
+        : `Casos del grupo · ${coach.nombre}`,
+  });
 
   return new NextResponse(new Uint8Array(pptx), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "Content-Disposition": `attachment; filename="cedem-junta-tecnica-${hoyISO()}.pptx"`,
+      "Content-Disposition": `attachment; filename="cedem-junta-${alcance === "alumno" ? slug : "grupo"}-${hoyISO()}.pptx"`,
     },
   });
 }

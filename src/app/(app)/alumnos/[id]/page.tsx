@@ -59,6 +59,29 @@ export default async function FichaAlumno({
           <Link href={`/subir?alumno=${alumno.id}`} className="btn btn-primario">
             ↑ Subir una sesión
           </Link>
+          {realizadas.length > 0 && (
+            <details className="relative">
+              <summary className="btn btn-suave cursor-pointer">Junta técnica (PPTX)</summary>
+              <div className="mt-2 flex flex-col gap-2 rounded-xl border border-[var(--borde)] bg-white p-3 shadow-sm">
+                <a
+                  href={`/api/documentos/${realizadas[0].id}/presentacion?alcance=alumno`}
+                  className="btn btn-suave"
+                  style={{ minHeight: 44, fontSize: "0.92rem" }}
+                  download
+                >
+                  De este alumno
+                </a>
+                <a
+                  href={`/api/documentos/${realizadas[0].id}/presentacion?alcance=grupo`}
+                  className="btn btn-suave"
+                  style={{ minHeight: 44, fontSize: "0.92rem" }}
+                  download
+                >
+                  De todo el grupo
+                </a>
+              </div>
+            </details>
+          )}
           {usuario.rol === "admin" && <BotonBajaAlumno id={alumno.id} activo={alumno.activo !== false} />}
         </div>
       </header>

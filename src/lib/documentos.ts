@@ -292,9 +292,13 @@ export async function fichaDOCX({
 export async function presentacionPPTX({
   coach,
   casos,
+  titulo = "Junta técnica",
+  subtitulo,
 }: {
   coach: Coach;
   casos: { alumno: Persona; sesion: SesionDoc; hallazgos: Hallazgo[] }[];
+  titulo?: string;
+  subtitulo?: string;
 }): Promise<Buffer> {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
@@ -310,7 +314,7 @@ export async function presentacionPPTX({
     w: 2.1,
     h: (2.1 * 240) / 901,
   });
-  portada.addText("Junta técnica", {
+  portada.addText(titulo, {
     x: 0.7,
     y: 1.6,
     w: 8.6,
@@ -319,7 +323,7 @@ export async function presentacionPPTX({
     bold: true,
     color: "FFFFFF",
   });
-  portada.addText(`Casos del grupo · ${coach.nombre}`, {
+  portada.addText(subtitulo ?? `Casos del grupo · ${coach.nombre}`, {
     x: 0.7,
     y: 2.6,
     w: 8.6,

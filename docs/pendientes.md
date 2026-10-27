@@ -5,21 +5,17 @@
 
 ## 1 · Presentación de junta técnica
 
-Lo que pidió Galia en la reunión, tal como quedó:
+Hecho (26 oct):
 
-- **Preguntar el alcance antes de generarla**: ¿de un alumno o de todo el grupo?
-- Si es **de un alumno**: revisar su caso completo y actualizado (todas sus sesiones, la minuta
-  corregida, sus compromisos y tareas) y armar la presentación con lo más relevante.
-- Si es **de todo el grupo**: un caso por diapositiva, como hoy.
-- **Usar la información actualizada**, no los hallazgos originales: hoy el PPTX lee la tabla
-  `hallazgos` e ignora las correcciones que el coach hizo por chat en la minuta.
-- **Permitir ajustes por chat**, con el mismo mecanismo de la minuta: el agente detecta
-  "actualiza la presentación…", la reescribe y el archivo sale corregido.
-- Está pendiente el **guión de la junta técnica** que iba a mandar Galia. Sin él, la estructura
-  de la presentación puede cambiar; conviene esperarlo antes de rehacerla.
+- **Alcance**: el botón pregunta si es **de este alumno** o **de todo el grupo**.
+- **Información actualizada**: usa la minuta corregida por chat, no los hallazgos originales.
+- El nombre del archivo incluye el alcance y la fecha.
 
-Orden sugerido: primero el arreglo de usar la minuta corregida (es un bug), y el resto cuando
-llegue el guión.
+Pendiente:
+
+- **Ajustes por chat** de la presentación (requiere guardar una versión por coach; la columna
+  `coaches.presentacion_ajustada` ya está en la migración 006, falta la lógica).
+- El **guión de la junta técnica** de Galia; cuando llegue, se ajusta la estructura.
 
 ## 2 · Deep research al dar de alta
 
