@@ -178,6 +178,15 @@ export default async function FichaAlumno({
                     </span>
                   </div>
 
+                  <AccionesSesion
+                    id={s.id}
+                    alumnoId={alumno.id}
+                    fecha={s.fecha}
+                    hora={s.hora}
+                    duracion={s.duracion_min}
+                    agendada={!lista}
+                  />
+
                   {s.resumen_ejecutivo ? (
                     <p className="mt-3">{s.resumen_ejecutivo}</p>
                   ) : (
@@ -233,14 +242,6 @@ export default async function FichaAlumno({
                     )}
                   </div>
 
-                  <AccionesSesion
-                    id={s.id}
-                    alumnoId={alumno.id}
-                    fecha={s.fecha}
-                    hora={s.hora}
-                    duracion={s.duracion_min}
-                    agendada={!lista}
-                  />
                 </li>
               );
             })}

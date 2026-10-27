@@ -22,14 +22,24 @@ export async function POST(req: Request) {
     let rutaStorage: string | null = null;
     let tipoSesion: "individual" | "consejo" = "individual";
     let sesionId: string | undefined;
+    let reemplazar = false;
 
     if (tipo.includes("application/json")) {
-      const cuerpo = (await req.json()) as { ruta?: string; nombre?: string; alumnoId?: string; fecha?: string };
+      const cuerpo = (await req.json()) as {
+        ruta?: string;
+        nombre?: string;
+        alumnoId?: string;
+        fecha?: string;
+        sesionId?: string;
+        tipo?: string;
+        reemplazar?: boolean;
+      };
       alumnoId = String(cuerpo.alumnoId || "");
       fecha = String(cuerpo.fecha || fecha);
       if ((cuerpo as { tipo?: string }).tipo === "consejo") tipoSesion = "consejo";
       const sid = (cuerpo as { sesionId?: string }).sesionId;
       if (sid) sesionId = sid;
+      if ((cuerpo as { reemplazar?: boolean }).reemplazar === true) reemplazar = true;
       rutaStorage = cuerpo.ruta || null;
 
       if (!rutaStorage) return NextResponse.json({ error: "Falta el archivo." }, { status: 400 });
@@ -53,10 +63,11 @@ export async function POST(req: Request) {
       if (String(formulario.get("tipo") || "") === "consejo") tipoSesion = "consejo";
       const sid = String(formulario.get("sesionId") || "");
       if (sid) sesionId = sid;
+      if (String(formulario.get("reemplazar") || "") === "1") reemplazar = true;
     }
 
     const esAudio = AUDIO.test(archivo.name);
-    const trabajo = guardarArchivo({ usuario, alumnoId, fecha, archivo, tipo: tipoSesion, sesionId });
+    const trabajo = guardarArchivo({ usuario, alumnoId, fecha, archivo, tipo: tipoSesion, sesionId, reemplazar });
 
     const resultado = esAudio
       ? await Promise.race([
@@ -77,7 +88,8 @@ export async function POST(req: Request) {
     }
 
     if (!resultado.ok) {
-      return NextResponse.json({ error: resultado.error, codigo: resultado.codigo }, { status: 400 });
+      const estado = resultado.codigo === "duplicada" ? 409 : 400;
+      return NextResponse.json({ error: resultado.error, codigo: resultado.codigo }, { status: estado });
     }
 
     if (rutaStorage) {

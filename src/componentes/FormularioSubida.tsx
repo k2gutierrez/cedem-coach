@@ -85,14 +85,26 @@ export default function FormularioSubida({
     }
   };
 
-  const procesar = async (cuerpo: FormData | object, esJson: boolean) => {
+  const procesar = async (cuerpo: FormData | object, esJson: boolean, reemplazar = false) => {
+    if (reemplazar) {
+      if (esJson) (cuerpo as Record<string, unknown>).reemplazar = true;
+      else (cuerpo as FormData).set("reemplazar", "1");
+    }
+
     const r = await fetch("/api/sesiones", {
       method: "POST",
       ...(esJson
         ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) }
         : { body: cuerpo as FormData }),
     });
-    return { ok: r.ok, datos: (await r.json().catch(() => ({}))) as { error?: string; alumnoId?: string } };
+
+    const datos = (await r.json().catch(() => ({}))) as {
+      error?: string;
+      alumnoId?: string;
+      codigo?: string;
+    };
+
+    return { ok: r.ok, datos, codigo: datos.codigo };
   };
 
   const enviar = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -127,40 +139,59 @@ export default function FormularioSubida({
         await subirAStorage(firma.url, file, setAvance);
         setFase("analizando");
 
-        const { ok, datos } = await procesar(
-          {
-            ruta: firma.ruta,
-            nombre: file.name,
-            alumnoId: esConsejo ? "" : alumnoId,
-            tipo: esConsejo ? "consejo" : "individual",
-            ...(sesionElegida && sesionElegida !== "nueva" ? { sesionId: sesionElegida } : {}),
-            fecha,
-          },
-          true
-        );
-        if (!ok) {
-          setFase("inicio");
-          return setError(datos.error || "No se pudo procesar el archivo.");
+        const cuerpo = {
+          ruta: firma.ruta,
+          nombre: file.name,
+          alumnoId: esConsejo ? "" : alumnoId,
+          tipo: esConsejo ? "consejo" : "individual",
+          ...(sesionElegida && sesionElegida !== "nueva" ? { sesionId: sesionElegida } : {}),
+          fecha,
+        };
+
+        let r = await procesar(cuerpo, true);
+        if (!r.ok && r.codigo === "duplicada") {
+          if (!confirm("Ya hay una sesión de este alumno en esa fecha. ¿Reemplazarla?")) {
+            setFase("inicio");
+            return;
+          }
+          r = await procesar(cuerpo, true, true);
         }
-        return terminar(datos.alumnoId);
+        if (!r.ok) {
+          setFase("inicio");
+          return setError(r.datos.error || "No se pudo procesar el archivo.");
+        }
+        return terminar(r.datos.alumnoId);
       }
 
       setFase("analizando");
-      const datos = new FormData();
-      datos.set("alumnoId", esConsejo ? "" : alumnoId);
-      datos.set("tipo", esConsejo ? "consejo" : "individual");
-      datos.set("fecha", fecha);
-      if (sesionElegida && sesionElegida !== "nueva") datos.set("sesionId", sesionElegida);
-      datos.set("archivo", file);
+      const armar = () => {
+        const datos = new FormData();
+        datos.set("alumnoId", esConsejo ? "" : alumnoId);
+        datos.set("tipo", esConsejo ? "consejo" : "individual");
+        datos.set("fecha", fecha);
+        if (sesionElegida && sesionElegida !== "nueva") datos.set("sesionId", sesionElegida);
+        datos.set("archivo", file);
+        return datos;
+      };
 
-      const { ok, datos: respuesta } = await procesar(datos, false);
-      if (!ok) {
-        setFase("inicio");
-        return setError(respuesta.error || "No se pudo procesar el archivo.");
+      let r = await procesar(armar(), false);
+      if (!r.ok && r.codigo === "duplicada") {
+        if (!confirm("Ya hay una sesión de este alumno en esa fecha. ¿Reemplazarla?")) {
+          setFase("inicio");
+          return;
+        }
+        r = await procesar(armar(), false, true);
       }
-      terminar(respuesta.alumnoId);
+      if (!r.ok) {
+        setFase("inicio");
+        return setError(r.datos.error || "No se pudo procesar el archivo.");
+      }
+      terminar(r.datos.alumnoId);
     } catch (err) {
       setFase("inicio");
+      if (entrada.current) entrada.current.value = "";
+      setArchivo(null);
+
       const mensaje = (err as Error).message === "red"
         ? "Se cortó la conexión durante la subida. Intenta de nuevo."
         : `No se pudo subir el archivo (${(err as Error).message}).`;
@@ -265,8 +296,22 @@ export default function FormularioSubida({
             Elegir archivo
           </button>
           {archivo && (
-            <span className="etiqueta" style={{ background: "#e8f4fb", color: "#0b4d70" }}>
+            <span className="etiqueta flex items-center gap-2" style={{ background: "#e8f4fb", color: "#0b4d70" }}>
               {archivo.nombre} · {peso(archivo.bytes)}
+              <button
+                type="button"
+                aria-label="Quitar archivo"
+                className="font-bold"
+                style={{ lineHeight: 1 }}
+                onClick={() => {
+                  if (entrada.current) entrada.current.value = "";
+                  setArchivo(null);
+                  setError(null);
+                  setFase("inicio");
+                }}
+              >
+                ×
+              </button>
             </span>
           )}
         </div>

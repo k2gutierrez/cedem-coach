@@ -19,6 +19,7 @@ export async function guardarArchivo({
   archivo,
   tipo = "individual",
   sesionId,
+  reemplazar = false,
 }: {
   usuario: Usuario;
   alumnoId: string;
@@ -26,6 +27,7 @@ export async function guardarArchivo({
   archivo: File;
   tipo?: "individual" | "consejo";
   sesionId?: string;
+  reemplazar?: boolean;
 }): Promise<{ ok: true; sesionId: string; alumnoId: string | null; caracteres: number } | Fallo> {
   const esConsejo = tipo === "consejo";
   if (!alumnoId && !esConsejo) return { ok: false, error: "Elige el alumno.", codigo: "sin_alumno" };
@@ -67,6 +69,29 @@ export async function guardarArchivo({
       return { ok: false, error: "Esa sesión no es tuya.", codigo: "sin_permiso" };
     }
     idPrevia = elegida.id;
+  }
+
+  // Si ya hay una sesión de ese alumno en esa fecha: se avisa, o se reemplaza.
+  if (!idPrevia && !esConsejo) {
+    const { data: yaExiste } = await db
+      .from("sesiones")
+      .select("id")
+      .eq("alumno_id", alumnoId)
+      .eq("fecha", fecha)
+      .not("transcripcion", "is", null)
+      .limit(1)
+      .maybeSingle();
+
+    if (yaExiste) {
+      if (!reemplazar) {
+        return {
+          ok: false,
+          codigo: "duplicada",
+          error: "Ya hay una sesión de este alumno en esa fecha. ¿Quieres reemplazarla?",
+        };
+      }
+      idPrevia = yaExiste.id;
+    }
   }
 
   let fechaFinal = fecha;

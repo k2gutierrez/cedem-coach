@@ -4,32 +4,62 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+const LIMITE_MS = 60_000;
+
 export default function AnalizadorPendiente({ sesionId }: { sesionId: string }) {
   const router = useRouter();
   const [estado, setEstado] = useState<"analizando" | "error">("analizando");
   const [mensaje, setMensaje] = useState("");
+  const [segundos, setSegundos] = useState(0);
   const lanzado = useRef(false);
+
+  useEffect(() => {
+    if (estado !== "analizando") return;
+    const reloj = setInterval(() => setSegundos((s) => s + 1), 1000);
+    return () => clearInterval(reloj);
+  }, [estado]);
 
   const analizar = async () => {
     setEstado("analizando");
     setMensaje("");
+    setSegundos(0);
+
+    const control = new AbortController();
+    const corte = setTimeout(() => control.abort(), LIMITE_MS);
+
     try {
       const r = await fetch("/api/sesiones/analizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sesionId }),
+        signal: control.signal,
       });
+
+      const tipo = r.headers.get("content-type") || "";
+      if (!tipo.includes("application/json")) {
+        setEstado("error");
+        setMensaje("El servidor tardó demasiado en responder. Intenta de nuevo.");
+        return;
+      }
+
       const j = (await r.json().catch(() => ({}))) as { error?: string };
       if (!r.ok) {
         setEstado("error");
         setMensaje(j.error || "El agente no pudo analizar la sesión.");
         return;
       }
+
       toast.success("Sesión analizada");
       router.refresh();
-    } catch {
+    } catch (e) {
       setEstado("error");
-      setMensaje("Se cortó la conexión antes de terminar. Revisa tu internet.");
+      setMensaje(
+        (e as Error).name === "AbortError"
+          ? "Pasó más de un minuto sin respuesta. Puede ser un corte; intenta de nuevo."
+          : "Se cortó la conexión antes de terminar. Revisa tu internet."
+      );
+    } finally {
+      clearTimeout(corte);
     }
   };
 
@@ -60,10 +90,11 @@ export default function AnalizadorPendiente({ sesionId }: { sesionId: string }) 
     <div className="mt-3 rounded-xl p-4" style={{ background: "#f2fbff", border: "1px solid #b9e2f5" }}>
       <div className="flex items-center gap-3">
         <span className="pensando-punto" />
-        <strong>El agente está leyendo la sesión…</strong>
+        <strong>El agente está leyendo la sesión… {segundos} s</strong>
       </div>
       <p className="mt-1 text-sm text-[var(--texto-suave)]">
         La transcripción ya quedó guardada. Esto tarda unos segundos y la página se actualiza sola.
+        {segundos > 40 && " Está tardando más de lo normal; si pasa de un minuto te ofreceré reintentar."}
       </p>
     </div>
   );

@@ -31,6 +31,23 @@ export class ErrorIngesta extends Error {
   }
 }
 
+
+/** Algunos .vtt vienen en UTF-16 (Windows); se detecta por el BOM. */
+function textoDeBuffer(buffer: Buffer): string {
+  if (buffer.length > 1) {
+    const b0 = buffer[0];
+    const b1 = buffer[1];
+    if (b0 === 0xff && b1 === 0xfe) return buffer.subarray(2).toString("utf16le");
+    if (b0 === 0xfe && b1 === 0xff) {
+      const copia = Buffer.from(buffer.subarray(2));
+      copia.swap16();
+      return copia.toString("utf16le");
+    }
+  }
+  const crudo = buffer.toString("utf8");
+  return crudo.replace(/^\uFEFF/, "");
+}
+
 function limpiarVTT(contenido: string): string {
   const salida: string[] = [];
   let anterior = "";
@@ -168,7 +185,7 @@ export async function extraer(buffer: Buffer, nombre: string, mime: string): Pro
   const meta: Record<string, unknown> = { formato: clase };
 
   if (clase === "texto") {
-    const crudo = buffer.toString("utf8");
+    const crudo = textoDeBuffer(buffer);
     const esSubtitulo = /\.(vtt|srt)$/i.test(nombre);
     texto = unirHablantes(esSubtitulo ? limpiarVTT(crudo) : normalizar(crudo));
   } else if (clase === "docx") {
