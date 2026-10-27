@@ -19,6 +19,26 @@ export default function AnalizadorPendiente({ sesionId }: { sesionId: string }) 
     return () => clearInterval(reloj);
   }, [estado]);
 
+  // Si la petición se corta, se consulta si el análisis terminó de todos modos.
+  const esperarResultado = async () => {
+    for (let intento = 0; intento < 9; intento += 1) {
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const r = await fetch(`/api/sesiones/${sesionId}/estado`);
+        if (!r.ok) continue;
+        const j = (await r.json()) as { analizada?: boolean };
+        if (j.analizada) {
+          toast.success("Sesión analizada");
+          router.refresh();
+          return true;
+        }
+      } catch {
+        /* siguiente intento */
+      }
+    }
+    return false;
+  };
+
   const analizar = async () => {
     setEstado("analizando");
     setMensaje("");
@@ -37,6 +57,9 @@ export default function AnalizadorPendiente({ sesionId }: { sesionId: string }) 
 
       const tipo = r.headers.get("content-type") || "";
       if (!tipo.includes("application/json")) {
+        // Puede ser que el análisis sí haya terminado: se consulta antes de fallar.
+        setMensaje("El servidor no respondió a tiempo; verificando si el análisis terminó…");
+        if (await esperarResultado()) return;
         setEstado("error");
         setMensaje("El servidor tardó demasiado en responder. Intenta de nuevo.");
         return;
@@ -52,6 +75,9 @@ export default function AnalizadorPendiente({ sesionId }: { sesionId: string }) 
       toast.success("Sesión analizada");
       router.refresh();
     } catch (e) {
+      setMensaje("Se cortó la conexión; verificando si el análisis terminó…");
+      if (await esperarResultado()) return;
+
       setEstado("error");
       setMensaje(
         (e as Error).name === "AbortError"

@@ -85,7 +85,7 @@ ${listaTareas}
 
 Transcripción de la sesión:
 """
-${muestraTranscripcion(transcripcion, 18000)}
+${muestraTranscripcion(transcripcion, 12000)}
 """`;
 
   const r = await fetch(URL_API, {
