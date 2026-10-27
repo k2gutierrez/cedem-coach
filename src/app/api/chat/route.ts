@@ -131,7 +131,7 @@ export async function POST(req: Request) {
 
   let consultaSesiones = db
     .from("sesiones")
-    .select("fecha, resumen_ejecutivo, nota_coach, alumnos(nombre)")
+    .select("id, fecha, resumen_ejecutivo, nota_coach, minuta_ajustada, alumnos(nombre)")
     .order("fecha", { ascending: false })
     .limit(10);
   if (usuario.rol !== "admin") consultaSesiones = consultaSesiones.eq("coach_id", usuario.id);
@@ -143,6 +143,35 @@ export async function POST(req: Request) {
     buscarMaterial(ultima),
   ]);
 
+  const idsSesiones = (sesiones ?? []).map((s) => s.id).filter(Boolean);
+
+  const [{ data: hallazgos }, { data: compromisos }] = await Promise.all([
+    idsSesiones.length
+      ? db.from("hallazgos").select("sesion_id, titulo, detalle, cita").in("sesion_id", idsSesiones).limit(40)
+      : Promise.resolve({ data: [] as { sesion_id: string; titulo: string; detalle: string | null; cita: string | null }[] }),
+    idsSesiones.length
+      ? db
+          .from("compromisos")
+          .select("sesion_id, texto, fecha, estado")
+          .in("sesion_id", idsSesiones)
+          .eq("estado", "abierto")
+          .limit(30)
+      : Promise.resolve({ data: [] as { sesion_id: string; texto: string; fecha: string | null; estado: string }[] }),
+  ]);
+
+  type Ajuste = { resumen?: string; hallazgos?: { titulo: string; detalle?: string; cita?: string }[] };
+  const porSesion = new Map<string, { hallazgos: string[]; compromisos: string[] }>();
+  for (const h of hallazgos ?? []) {
+    const actual = porSesion.get(h.sesion_id) ?? { hallazgos: [], compromisos: [] };
+    actual.hallazgos.push(`${h.titulo}${h.cita ? ` ("${h.cita.slice(0, 120)}")` : ""}`);
+    porSesion.set(h.sesion_id, actual);
+  }
+  for (const c of compromisos ?? []) {
+    const actual = porSesion.get(c.sesion_id) ?? { hallazgos: [], compromisos: [] };
+    actual.compromisos.push(`${c.texto}${c.fecha ? ` (${c.fecha})` : ""}`);
+    porSesion.set(c.sesion_id, actual);
+  }
+
   const lineas: string[] = [
     `COACH: ${usuario.nombre} (${usuario.rol})`,
     "",
@@ -150,13 +179,26 @@ export async function POST(req: Request) {
     ...(alumnos ?? []).map((a) => `- ${a.nombre}${a.empresa ? ` · ${a.empresa}` : ""}${a.reto ? ` · proyecto: ${a.reto}` : ""}`),
     "",
     alumnoId ? "SESIONES DE ESTE ALUMNO:" : "SESIONES RECIENTES:",
-    ...(sesiones ?? []).map(
-      (s) =>
-        `- ${s.fecha} · ${(s.alumnos as unknown as { nombre?: string } | null)?.nombre ?? "sesión"}: ${recortar(
-          s.resumen_ejecutivo || "sin resumen",
-          320
-        )}`
-    ),
+    ...(sesiones ?? []).map((s) => {
+      const ajuste = (s.minuta_ajustada ?? null) as {
+        resumen?: string;
+        hallazgos?: { titulo: string; cita?: string }[];
+      } | null;
+      const extra = porSesion.get(s.id);
+      const quien = (s.alumnos as unknown as { nombre?: string } | null)?.nombre ?? "sesión";
+      const partes = [
+        `- ${s.fecha} · ${quien}: ${recortar(ajuste?.resumen ?? s.resumen_ejecutivo ?? "sin resumen", 420)}`,
+      ];
+
+      const hallazgosSesion = ajuste?.hallazgos?.length
+        ? ajuste.hallazgos.map((h) => `${h.titulo}${h.cita ? ` ("${h.cita.slice(0, 100)}")` : ""}`)
+        : extra?.hallazgos ?? [];
+      if (hallazgosSesion.length) partes.push(`  hallazgos: ${hallazgosSesion.slice(0, 3).join("; ")}`);
+      if (extra?.compromisos.length) {
+        partes.push(`  compromisos abiertos: ${extra.compromisos.slice(0, 3).join("; ")}`);
+      }
+      return partes.join("\n");
+    }),
     "",
     "MATERIAL DE LA FIRMA (fragmentos relevantes):",
     ...(material.length
@@ -166,15 +208,23 @@ export async function POST(req: Request) {
 
   let tareasParaMarcar: string[] = [];
 
-  // Memoria: lo que ya se habló con este alumno (o en el chat general).
-  if (alumnoId) {
-    const { data: previos } = await db
-      .from("chat_mensajes")
-      .select("rol, texto")
-      .eq("alumno_id", alumnoId)
-      .order("creado_en", { ascending: false })
-      .limit(6);
+  // Memoria: la conversación previa, de este alumno o del chat general.
+  const consultaHistorial = alumnoId
+    ? db.from("chat_mensajes").select("rol, texto").eq("alumno_id", alumnoId)
+    : db.from("chat_mensajes").select("rol, texto").eq("coach_id", usuario.id).is("alumno_id", null);
 
+  const { data: previos } = await consultaHistorial
+    .order("creado_en", { ascending: false })
+    .limit(8);
+
+  if (previos?.length) {
+    lineas.push("", "CONVERSACIÓN PREVIA (lo más reciente al final):");
+    for (const m of [...previos].reverse()) {
+      lineas.push(`${m.rol === "user" ? "Coach" : "Agente"}: ${recortar(m.texto, 500)}`);
+    }
+  }
+
+  if (alumnoId) {
     const { data: ultimaSesion } = await db
       .from("sesiones")
       .select("id, fecha")
@@ -209,12 +259,6 @@ export async function POST(req: Request) {
       );
     }
 
-    if (previos?.length) {
-      lineas.push("", "CONVERSACIÓN PREVIA CON ESTE ALUMNO (lo más reciente al final):");
-      for (const m of [...previos].reverse()) {
-        lineas.push(`${m.rol === "user" ? "Coach" : "Agente"}: ${recortar(m.texto, 400)}`);
-      }
-    }
   }
 
   // Guarda el mensaje del coach (si la tabla existe).

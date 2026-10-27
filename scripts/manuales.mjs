@@ -241,7 +241,7 @@ const COACH = [
     "Pregunta lo que necesites: “¿qué compromisos quedaron abiertos?”, “¿qué reviso en la siguiente sesión?”.",
     "Para corregir: “actualiza la minuta: el compromiso es entregar el estado de resultados el 5 de noviembre”. El agente la reescribe y avisa.",
     "Para tareas: “la tarea del estado de resultados ya se entregó”. Queda marcada con su fecha.",
-    "El chat recuerda la conversación: no repitas el contexto.",
+    "El chat recuerda la conversación y consulta el resumen, los hallazgos, los compromisos, las tareas y la transcripción completa: no repitas el contexto.",
     "Si el agente no aplica el cambio, cada sesión tiene el botón “Aplicar el chat a la minuta”.",
   ]},
 
