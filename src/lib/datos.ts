@@ -13,6 +13,7 @@ export type Alumno = {
   etapa: string | null;
   coach_id: string;
   activo: boolean;
+  brief_actualizado?: string | null;
   creado_en: string;
 };
 
@@ -31,7 +32,7 @@ export type Sesion = {
 export type Tarea = { id: string; titulo: string; asignatura: string | null; mes: string | null };
 
 const CAMPOS_ALUMNO =
-  "id, nombre, empresa, giro, ciudad, generacion, cargo, reto, etapa, coach_id, activo, creado_en";
+  "id, nombre, empresa, giro, ciudad, generacion, cargo, reto, etapa, coach_id, activo, brief_actualizado, creado_en";
 
 /** Filtro por rol: el coach solo ve lo suyo, el admin ve todo. */
 

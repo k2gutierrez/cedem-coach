@@ -594,3 +594,129 @@ export async function fichaCortaDOCX({
 
   return Packer.toBuffer(doc);
 }
+
+/* ------------------------------------------------------------------ */
+/* Brief de contexto del alumno (deep research)                        */
+/* ------------------------------------------------------------------ */
+
+export async function briefPDF({
+  alumno,
+  coach,
+  texto,
+  fuentes,
+}: {
+  alumno: Persona;
+  coach: Coach;
+  texto: string;
+  fuentes: { titulo: string; url: string }[];
+}): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const normal = await pdf.embedFont(StandardFonts.Helvetica);
+  const negrita = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const cursiva = await pdf.embedFont(StandardFonts.HelveticaOblique);
+
+  const ANCHO = 595.28;
+  const ALTO = 841.89;
+  const MARGEN = 56;
+  const UTIL = ANCHO - MARGEN * 2;
+
+  let pagina = pdf.addPage([ANCHO, ALTO]);
+  let y = ALTO - MARGEN;
+
+  const nueva = () => {
+    pagina = pdf.addPage([ANCHO, ALTO]);
+    y = ALTO - MARGEN - 20;
+  };
+
+  const asegurar = (alto: number) => {
+    if (y - alto < MARGEN) nueva();
+  };
+
+  const escribir = (
+    cadena: string,
+    opciones: { size?: number; font?: typeof normal; color?: typeof NEGRO; sangria?: number } = {}
+  ) => {
+    const { size = 10.5, font = normal, color = NEGRO, sangria = 0 } = opciones;
+    const espacio = UTIL - sangria;
+    const interlinea = size * 1.42;
+    const limpio = cadena.replace(/\*\*/g, "").replace(/`/g, "");
+    const palabras = limpio.split(/\s+/).filter(Boolean);
+    let linea = "";
+
+    for (const palabra of palabras) {
+      const prueba = linea ? `${linea} ${palabra}` : palabra;
+      if (font.widthOfTextAtSize(prueba, size) > espacio && linea) {
+        asegurar(interlinea);
+        pagina.drawText(linea, { x: MARGEN + sangria, y, size, font, color });
+        y -= interlinea;
+        linea = palabra;
+      } else {
+        linea = prueba;
+      }
+    }
+    if (linea) {
+      asegurar(interlinea);
+      pagina.drawText(linea, { x: MARGEN + sangria, y, size, font, color });
+      y -= interlinea;
+    }
+  };
+
+  const logo = await pdf.embedPng(Buffer.from(LOGO_NAVY, "base64"));
+  pagina.drawImage(logo, { x: MARGEN, y: ALTO - MARGEN - 8, width: 110, height: (110 * 300) / 1061 });
+  y = ALTO - MARGEN - 46;
+
+  escribir(`Brief de contexto · ${alumno.nombre}`, { size: 18, font: negrita, color: AZUL });
+  escribir(
+    [alumno.empresa, alumno.cargo].filter(Boolean).join(" · ") || "Sin empresa registrada",
+    { size: 10, color: GRIS }
+  );
+  escribir(
+    `Preparado para ${coach.nombre} · ${new Date().toLocaleDateString("es-MX", { dateStyle: "long" })}`,
+    { size: 9.5, color: GRIS }
+  );
+  escribir("Documento interno. Contexto, no diagnóstico: no se comparte con el alumno.", {
+    size: 9,
+    font: cursiva,
+    color: GRIS,
+  });
+  y -= 10;
+
+  for (const cruda of texto.split(/\r?\n/)) {
+    const linea = cruda.trim();
+    if (!linea) {
+      y -= 6;
+      continue;
+    }
+
+    if (/^#{1,2}\s/.test(linea)) {
+      asegurar(30);
+      y -= 6;
+      escribir(linea.replace(/^#{1,2}\s*/, ""), { size: 13, font: negrita, color: AZUL });
+      y -= 2;
+    } else if (/^#{3}\s/.test(linea)) {
+      asegurar(24);
+      escribir(linea.replace(/^#{3}\s*/, ""), { size: 11, font: negrita, color: AZUL });
+    } else if (/^[-*•]\s/.test(linea)) {
+      escribir(`•  ${linea.replace(/^[-*•]\s*/, "")}`, { sangria: 8 });
+    } else if (/^>\s/.test(linea)) {
+      escribir(linea.replace(/^>\s*/, ""), { size: 9.5, font: cursiva, color: GRIS, sangria: 8 });
+    } else if (/^\d+\.\s/.test(linea)) {
+      escribir(linea, { sangria: 8 });
+    } else {
+      escribir(linea);
+    }
+  }
+
+  if (fuentes.length) {
+    asegurar(40);
+    y -= 8;
+    escribir("Fuentes", { size: 13, font: negrita, color: AZUL });
+    for (const f of fuentes.slice(0, 20)) {
+      escribir(`•  ${f.titulo} — ${f.url}`, { size: 9, color: GRIS, sangria: 8 });
+    }
+  }
+
+  pagina.drawText("CEDEM Coach · uso interno", { x: MARGEN, y: 30, size: 8, font: normal, color: GRIS });
+
+  return pdf.save();
+}

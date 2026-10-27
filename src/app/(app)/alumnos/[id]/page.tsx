@@ -5,6 +5,7 @@ import AplicarChat from "@/componentes/AplicarChat";
 import Chat from "@/componentes/Chat";
 import AnalizadorPendiente from "@/componentes/AnalizadorPendiente";
 import FormularioAgenda from "@/componentes/FormularioAgenda";
+import BriefInvestigacion from "@/componentes/BriefInvestigacion";
 import FormularioAlumnoEdicion from "@/componentes/FormularioAlumnoEdicion";
 import { alumnoPorId, historialChat, sesionesDetalle, tareasConCobertura } from "@/lib/datos";
 import { usuarioDePagina } from "@/lib/sesion";
@@ -67,6 +68,12 @@ export default async function FichaAlumno({
           <strong>Sesión guardada.</strong> El agente la está analizando aquí abajo.
         </div>
       )}
+
+      <BriefInvestigacion
+        alumnoId={alumno.id}
+        empresa={alumno.empresa}
+        actualizado={alumno.brief_actualizado}
+      />
 
       <FormularioAlumnoEdicion alumno={alumno} />
 
