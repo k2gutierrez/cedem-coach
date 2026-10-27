@@ -71,7 +71,6 @@ function datosDelAlumno(alumno: {
   giro: string | null;
   generacion: string | null;
   reto: string | null;
-  brief: string | null;
 }) {
   const lineas = [
     `- Empresa: ${alumno.empresa ?? "(no registrada)"}`,
@@ -85,60 +84,33 @@ function datosDelAlumno(alumno: {
   return lineas.join("\n");
 }
 
-/** Genera el brief con búsqueda web de DeepSeek (una sola llamada, ~20 s). */
-export async function generarBrief(alumnoId: string): Promise<{ ok: true; brief: ResultadoBrief } | { ok: false; error: string }> {
-  if (!process.env.DEEPSEEK_API_KEY) return { ok: false, error: "Falta la llave de DeepSeek." };
-
-  const { data: alumno } = await db
+async function alumnoPorId(alumnoId: string) {
+  const { data } = await db
     .from("alumnos")
-    .select("id, nombre, empresa, cargo, ciudad, giro, generacion, reto, brief")
+    .select("id, nombre, empresa, cargo, ciudad, giro, generacion, reto")
     .eq("id", alumnoId)
     .maybeSingle();
+  return data;
+}
 
-  if (!alumno) return { ok: false, error: "Ese alumno no existe." };
-  if (!alumno.empresa) {
-    return { ok: false, error: "Falta la empresa del alumno. Agrégala en sus datos y vuelve a intentar." };
-  }
-
-  const clave = process.env.DEEPSEEK_API_KEY;
-
-  const respuesta = await fetch(URL_API, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${clave}`,
-      "x-api-key": clave,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: process.env.DEEPSEEK_MODELO_ANALISIS || "deepseek-flash",
-      max_tokens: 4500,
-      thinking: { type: "disabled" },
-      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
-      messages: [
-        {
-          role: "user",
-          content: `${INSTRUCCIONES}\n\nDATOS DEL COACHEE\n${datosDelAlumno(alumno)}\n\nGenera el brief ahora.`,
-        },
-      ],
-    }),
-  });
-
-  if (!respuesta.ok) {
-    const detalle = (await respuesta.text()).slice(0, 200);
-    return { ok: false, error: `El buscador no respondió (${respuesta.status}). ${detalle}` };
-  }
-
-  const j = (await respuesta.json()) as {
-    content?: { type: string; text?: string; content?: { title?: string; url?: string }[] }[];
+function cabeceras(clave: string) {
+  return {
+    authorization: `Bearer ${clave}`,
+    "x-api-key": clave,
+    "anthropic-version": "2023-06-01",
+    "content-type": "application/json",
   };
+}
 
-  const texto = (j.content ?? [])
+function textoDe(j: { content?: { type: string; text?: string }[] }) {
+  return (j.content ?? [])
     .filter((b) => b.type === "text" && b.text)
     .map((b) => b.text as string)
     .join("\n\n")
     .trim();
+}
 
+function fuentesDe(j: { content?: { type: string; content?: { title?: string; url?: string }[] }[] }) {
   const fuentes: Fuente[] = [];
   for (const bloque of j.content ?? []) {
     if (bloque.type !== "web_search_tool_result") continue;
@@ -148,8 +120,106 @@ export async function generarBrief(alumnoId: string): Promise<{ ok: true; brief:
       }
     }
   }
+  return fuentes;
+}
 
-  const limpio = limpiarBrief(texto);
+/** Paso 1: hechos con fuentes. Rápido (~8 s), sin redactar. */
+export async function buscarHechos(
+  alumnoId: string
+): Promise<{ ok: true; hechos: string; fuentes: Fuente[] } | { ok: false; error: string; codigo?: string }> {
+  if (!process.env.DEEPSEEK_API_KEY) return { ok: false, error: "Falta la llave de DeepSeek." };
+
+  const alumno = await alumnoPorId(alumnoId);
+  if (!alumno) return { ok: false, error: "Ese alumno no existe.", codigo: "no_existe" };
+  if (!alumno.empresa) {
+    return {
+      ok: false,
+      codigo: "sin_empresa",
+      error: "Falta la empresa del alumno. Agrégala en sus datos y vuelve a intentar.",
+    };
+  }
+
+  const clave = process.env.DEEPSEEK_API_KEY;
+  const r = await fetch(URL_API, {
+    method: "POST",
+    headers: cabeceras(clave),
+    body: JSON.stringify({
+      model: process.env.DEEPSEEK_MODELO_ANALISIS || "deepseek-flash",
+      max_tokens: 1800,
+      thinking: { type: "disabled" },
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
+      messages: [
+        {
+          role: "user",
+          content: `Investiga en la web esta empresa y su sector para preparar a un coach antes de su primera sesión.
+
+DATOS
+${datosDelAlumno(alumno)}
+
+Devuelve SOLO una lista de 12 a 18 hechos concretos, uno por línea, con [Hecho] y la fuente
+(nombre y URL). No redactes un documento ni des recomendaciones. Si algún dato no lo encuentras,
+no lo inventes.`,
+        },
+      ],
+    }),
+  });
+
+  if (!r.ok) {
+    return { ok: false, error: `El buscador no respondió (${r.status}). Intenta de nuevo.` };
+  }
+
+  const j = await r.json();
+  const hechos = textoDe(j);
+  if (hechos.length < 200) {
+    return { ok: false, error: "La búsqueda devolvió muy poca información. Intenta de nuevo." };
+  }
+
+  return { ok: true, hechos, fuentes: fuentesDe(j) };
+}
+
+/** Paso 2: redacta el brief con esos hechos y lo guarda (~11 s). */
+export async function redactarBrief(
+  alumnoId: string,
+  hechos: string,
+  fuentesExtra: Fuente[] = []
+): Promise<{ ok: true; brief: ResultadoBrief } | { ok: false; error: string }> {
+  if (!process.env.DEEPSEEK_API_KEY) return { ok: false, error: "Falta la llave de DeepSeek." };
+
+  const alumno = await alumnoPorId(alumnoId);
+  if (!alumno) return { ok: false, error: "Ese alumno no existe." };
+  if (!hechos?.trim()) return { ok: false, error: "Faltan los hechos de la investigación." };
+
+  const clave = process.env.DEEPSEEK_API_KEY;
+  const r = await fetch(URL_API, {
+    method: "POST",
+    headers: cabeceras(clave),
+    body: JSON.stringify({
+      model: process.env.DEEPSEEK_MODELO_ANALISIS || "deepseek-flash",
+      max_tokens: 4200,
+      thinking: { type: "disabled" },
+      messages: [
+        {
+          role: "user",
+          content: `${INSTRUCCIONES}
+
+DATOS DEL COACHEE
+${datosDelAlumno(alumno)}
+
+HECHOS INVESTIGADOS (úsalos como fuente; no inventes nada fuera de aquí)
+${hechos.slice(0, 9000)}
+
+Escribe el brief ahora.`,
+        },
+      ],
+    }),
+  });
+
+  if (!r.ok) {
+    return { ok: false, error: `El agente no respondió (${r.status}). Intenta de nuevo.` };
+  }
+
+  const j = await r.json();
+  const limpio = limpiarBrief(textoDe(j));
 
   if (limpio.length < 400) {
     return { ok: false, error: "El agente no alcanzó a escribir el brief. Intenta de nuevo." };
@@ -157,10 +227,10 @@ export async function generarBrief(alumnoId: string): Promise<{ ok: true; brief:
 
   const { error } = await db
     .from("alumnos")
-    .update({ brief: limpio, brief_fuentes: fuentes, brief_actualizado: new Date().toISOString() })
+    .update({ brief: limpio, brief_fuentes: fuentesExtra, brief_actualizado: new Date().toISOString() })
     .eq("id", alumnoId);
 
   if (error) return { ok: false, error: `No se pudo guardar: ${error.message}` };
 
-  return { ok: true, brief: { texto: limpio, fuentes } };
+  return { ok: true, brief: { texto: limpio, fuentes: fuentesExtra } };
 }

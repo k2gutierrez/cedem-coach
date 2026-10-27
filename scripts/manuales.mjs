@@ -248,7 +248,7 @@ const COACH = [
   { tipo: "seccion", texto: "8 · Brief de contexto (deep research)" },
   { tipo: "parrafo", texto: "En la ficha del alumno hay un botón “Generar brief”. Investiga la empresa y su industria en internet y escribe un documento de una a dos páginas con fuentes, para que llegues preparado a la primera sesión." },
   { tipo: "vinetas", items: [
-    "Tarda entre 20 y 30 segundos. No cierres la página mientras investiga.",
+    "Son dos pasos —buscar y escribir— y tarda unos 20 segundos en total. No cierres la página.",
     "Necesita que el alumno tenga empresa registrada.",
     "Cuando está listo puedes descargarlo en PDF. Sirve para cambiar el foco y volver a generarlo.",
     "Es contexto, no diagnóstico: no se comparte con el alumno ni se cita en la sesión.",
