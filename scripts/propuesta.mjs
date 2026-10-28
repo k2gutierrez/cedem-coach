@@ -57,8 +57,15 @@ const COSTO_MES = Object.fromEntries(
 );
 
 const TOTAL_IA = Object.values(COSTO_MES).reduce((a, b) => a + b, 0);
+const SUPABASE = {
+  planPro: 25, // incluye 10 USD de crédito de cómputo (una instancia Micro)
+  computoSmall: 15, // si algún día hace falta más memoria
+  credito: 10,
+};
+const SUPABASE_PEOR = SUPABASE.planPro + (SUPABASE.computoSmall - SUPABASE.credito); // 30 USD
+
 const INFRA = {
-  supabase: 25 * MXN_POR_USD,
+  supabase: SUPABASE.planPro * MXN_POR_USD,
   hosting: 5 * MXN_POR_USD,
   dominio: (15 * MXN_POR_USD) / 12,
 };
@@ -310,7 +317,7 @@ seccion("4 · Infraestructura");
 tabla(
   ["Concepto", "Al mes"],
   [
-    ["Base de datos, archivos y cuentas (Supabase Pro)", mxn(INFRA.supabase)],
+    ["Base de datos, archivos y cuentas (Supabase Pro, plan pagado)", mxn(INFRA.supabase)],
     ["AWS Amplify (detalle en la sección 5)", mxn(INFRA.hosting)],
     ["Dominio", mxn(INFRA.dominio)],
   ],
@@ -318,10 +325,32 @@ tabla(
 );
 
 destacado("Total mensual", `${mxn(TOTAL)} MXN`, "IA + infraestructura, con el uso de los supuestos");
+const ESCENARIOS = [
+  ["Base (los supuestos de este documento)", TOTAL_IA, SUPABASE.planPro, 5],
+  ["Uso doble y base de datos más grande", TOTAL_IA * 2, SUPABASE_PEOR, 5],
+  ["Uso triple y más tráfico", TOTAL_IA * 3, SUPABASE_PEOR, 8],
+].map(([nombre, ia, supabase, amplify]) => {
+  const total = ia + (supabase + amplify) * MXN_POR_USD + INFRA.dominio;
+  return [nombre, mxn(ia), mxn(supabase * MXN_POR_USD), mxn(total)];
+});
+
+nueva();
+escribir("Escenarios de costo", { size: 12, font: negrita, color: AZUL });
+salto(4);
+tabla(["Escenario", "IA", "Supabase", "Total al mes"], ESCENARIOS, [190, 80, 90, 110]);
+
 escribir(
-  `Aun si el uso se triplicara —más sesiones, más preguntas, más correcciones— el total sería de ${mxn(TOTAL_3X)} MXN al mes. La infraestructura es fija; la IA es la única parte que crece con el uso, y hoy representa ${Math.round((TOTAL_IA / TOTAL) * 100)}% del total.`,
+  `Incluso en el escenario más caro -el triple de uso, más tráfico y una base de datos más grande- el total queda en ${ESCENARIOS[2][3]} MXN. La IA es la única parte que crece con el uso y hoy representa ${Math.round(
+    (TOTAL_IA / TOTAL) * 100
+  )}% del total; la infraestructura es prácticamente fija.`,
   { size: 10 }
 );
+
+nota(
+  "Supabase Pro cuesta 25 USD al mes e incluye 10 USD de cómputo, suficiente para una instancia Micro. El escenario alto suma una instancia Small (15 USD) y aplica el crédito: 30 USD. El plan Team (599 USD) es para certificaciones y SSO, no hace falta aquí. La versión gratuita no se considera: se pausa tras una semana sin uso."
+);
+
+
 
 /* ---------------------------- AWS Amplify ---------------------------- */
 
@@ -342,7 +371,6 @@ const COSTO_AMPLIFY = {
 const AMPLIFY_REAL = Object.values(COSTO_AMPLIFY).reduce((a, b) => a + b, 0);
 const AMPLIFY_MXN = AMPLIFY_REAL * MXN_POR_USD;
 
-nueva();
 seccion("5 · AWS Amplify en detalle");
 escribir(
   "La aplicación se publica en AWS Amplify, el servicio de Amazon para aplicaciones web. Cobra por cuatro cosas, y para este tamaño de operación casi todo cae dentro de la capa gratuita.",
