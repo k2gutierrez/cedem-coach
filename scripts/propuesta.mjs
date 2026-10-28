@@ -281,6 +281,11 @@ tabla(
 );
 nota("Entrada y salida son tokens. Un token es más o menos tres cuartos de palabra; 12,000 caracteres de transcripción son unos 3,400 tokens.");
 
+nota(
+  "Precios de referencia: DeepSeek, tarifa de pico, 2 yuanes por millón de tokens de entrada y 8 por millón de salida; búsqueda web 5 yuanes por mil consultas. Tipo de cambio 2.6 MXN por yuan y 18.4 MXN por dólar."
+);
+
+
 /* ---------------------------- Consumo mensual ---------------------------- */
 
 seccion("3 · Consumo estimado al mes");
@@ -306,7 +311,7 @@ tabla(
   ["Concepto", "Al mes"],
   [
     ["Base de datos, archivos y cuentas (Supabase Pro)", mxn(INFRA.supabase)],
-    ["Publicación de la aplicación (AWS Amplify)", mxn(INFRA.hosting)],
+    ["AWS Amplify (detalle en la sección 5)", mxn(INFRA.hosting)],
     ["Dominio", mxn(INFRA.dominio)],
   ],
   [330, 120]
@@ -318,13 +323,57 @@ escribir(
   { size: 10 }
 );
 
+/* ---------------------------- AWS Amplify ---------------------------- */
+
+const AMPLIFY = {
+  compilaciones: 40 * 4, // 40 despliegues al mes, 4 minutos cada uno
+  minutosGratis: 1000,
+  almacenamientoGB: 1,
+  transferenciaGB: 10,
+  peticiones: 50_000,
+};
+
+const COSTO_AMPLIFY = {
+  compilacion: Math.max(0, AMPLIFY.compilaciones - AMPLIFY.minutosGratis) * 0.01,
+  almacenamiento: Math.max(0, AMPLIFY.almacenamientoGB - 5) * 0.023 + 0.02,
+  transferencia: Math.max(0, AMPLIFY.transferenciaGB - 15) * 0.15,
+  ssr: 0.10,
+};
+const AMPLIFY_REAL = Object.values(COSTO_AMPLIFY).reduce((a, b) => a + b, 0);
+const AMPLIFY_MXN = AMPLIFY_REAL * MXN_POR_USD;
+
+nueva();
+seccion("5 · AWS Amplify en detalle");
+escribir(
+  "La aplicación se publica en AWS Amplify, el servicio de Amazon para aplicaciones web. Cobra por cuatro cosas, y para este tamaño de operación casi todo cae dentro de la capa gratuita.",
+  { size: 10 }
+);
+salto(6);
+
+tabla(
+  ["Concepto", "Uso al mes", "Costo"],
+  [
+    ["Compilaciones (cada publicación)", `${AMPLIFY.compilaciones} min`, mxn(COSTO_AMPLIFY.compilacion)],
+    ["Almacenamiento de la aplicación", `${AMPLIFY.almacenamientoGB} GB`, mxn(COSTO_AMPLIFY.almacenamiento)],
+    ["Datos servidos a los usuarios", `${AMPLIFY.transferenciaGB} GB`, mxn(COSTO_AMPLIFY.transferencia)],
+    ["Renderizado del servidor", `${num(AMPLIFY.peticiones)} peticiones`, mxn(COSTO_AMPLIFY.ssr)],
+  ],
+  [230, 120, 110]
+);
+
+escribir(
+  `Con ese uso, Amplify costaría alrededor de ${mxn(AMPLIFY_MXN)} MXN al mes. En el presupuesto se reservan ${mxn(INFRA.hosting)} MXN (5 USD) para cubrir meses con más publicaciones, más tráfico o algún pico de consumo.`,
+  { size: 10 }
+);
+salto(6);
+
 nota(
-  "Precios de referencia: DeepSeek, tarifa de pico, 2 yuanes por millón de tokens de entrada y 8 por millón de salida; búsqueda web 5 yuanes por mil consultas. Tipo de cambio 2.6 MXN por yuan y 18.4 MXN por dólar."
+  "Capa gratuita de Amplify: 1,000 minutos de compilación, 5 GB de almacenamiento y 15 GB de datos servidos al mes. Cada publicación desde GitHub consume una compilación."
 );
 
 /* ---------------------------- Comparación ---------------------------- */
 
-seccion("5 · Contra monday.com");
+seccion("6 · Contra monday.com");
 tabla(
   ["Concepto", "monday.com", "MIEEF Coach"],
   [
@@ -342,7 +391,7 @@ nota("monday.com, plan Standard, ≈ 12 USD por usuario al mes. Con 4 coaches y 
 
 /* ---------------------------- Valor ---------------------------- */
 
-seccion("6 · Lo que devuelve");
+seccion("7 · Lo que devuelve");
 const sesionesMes = VOLUMEN.analisis + VOLUMEN.consejo;
 const horasMes = (sesionesMes * 40) / 60;
 
@@ -366,7 +415,7 @@ tabla(
 
 /* ---------------------------- Convencimiento ---------------------------- */
 
-seccion("7 · Por qué conviene");
+seccion("8 · Por qué conviene");
 vinetas([
   "El conocimiento se queda en CEDEM. Las clases, la metodología y las transcripciones viven en una base de la firma, no en computadoras personales ni en el chat de alguien.",
   "El coach deja de ser administrador de su propio trabajo: llega a la sesión con el expediente leído y sale con la minuta hecha.",
@@ -382,9 +431,17 @@ escribir(
   { size: 10.5, font: negrita, color: AZUL }
 );
 
+
+destacado("Costo de todo el año", `${mxn(TOTAL * 12)} MXN`, "12 meses con estos supuestos");
+
+escribir(
+  `Es el equivalente a ${Math.round((TOTAL * 12) / 500)} horas de trabajo de un coach. Al mes se ahorran 16. Si la plataforma se usa un solo mes, ya se pagó.`,
+  { size: 10.5, font: negrita, color: AZUL }
+);
+
 /* ---------------------------- Cierre ---------------------------- */
 
-seccion("8 · Qué falta para arrancar");
+seccion("9 · Qué falta para arrancar");
 vinetas([
   "Definir quién es el administrador y crear las cuentas de los cuatro coaches.",
   "Cargar las clases y la metodología del primer semestre.",
