@@ -238,11 +238,11 @@ pagina.drawText("Máster en Innovación y Emprendimiento en la Empresa Familiar"
 
 y = ALTO - 200;
 escribir("Lo que cuesta la plataforma y lo que devuelve", { size: 22, font: negrita, color: AZUL });
-escribir("Estimación mensual de costos y comparación con monday.com", { size: 12, color: GRIS });
+escribir("Estimación mensual de costos y lo que devuelve a la firma", { size: 12, color: GRIS });
 salto(14);
 
 escribir(
-  "Una plataforma propia cuesta la mitad de lo que costarían las cinco licencias de monday.com que el equipo necesitaría, y hace lo que monday no puede: leer la sesión, escribir la minuta, seguir los compromisos y conocer la metodología de la firma."
+  "Una plataforma propia hace lo que ninguna herramienta de organización hace: leer la sesión, escribir la minuta, seguir los compromisos y conocer la metodología de la firma. Y cuesta menos que una hora de coach al mes."
 );
 salto(10);
 
@@ -401,25 +401,9 @@ nota(
 
 /* ---------------------------- Comparación ---------------------------- */
 
-seccion("6 · Contra monday.com");
-tabla(
-  ["Concepto", "monday.com", "MIEEF Coach"],
-  [
-    ["Costo mensual (5 personas)", "≈ $1,100 MXN", mxn(TOTAL) + " MXN"],
-    ["Minutas a partir de la sesión", "No", "Sí"],
-    ["Seguimiento de compromisos", "Manual", "Automático"],
-    ["Metodología de la firma consultable", "No", "Sí"],
-    ["Reportes de avance por alumno", "Manual", "Automático"],
-    ["Datos de los alumnos", "En un tercero", "En la base de CEDEM"],
-  ],
-  [200, 130, 150]
-);
-
-nota("monday.com, plan Standard, ≈ 12 USD por usuario al mes. Con 4 coaches y la coordinación son 5 licencias. No incluye generación de documentos ni análisis de conversaciones.");
-
 /* ---------------------------- Valor ---------------------------- */
 
-seccion("7 · Lo que devuelve");
+seccion("6 · Lo que devuelve");
 const sesionesMes = VOLUMEN.analisis + VOLUMEN.consejo;
 const horasMes = (sesionesMes * 40) / 60;
 
@@ -441,16 +425,24 @@ tabla(
   [170, 150, 150]
 );
 
+escribir(
+  `Dicho por alumno: ${mxn(TOTAL / 20)} MXN al mes por cada uno de los 20 alumnos, o ${mxn(
+    TOTAL / sesionesMes
+  )} MXN por cada sesión documentada. Menos que el café de una reunión.`,
+  { size: 10.5, font: negrita, color: AZUL }
+);
+salto(6);
+
 /* ---------------------------- Convencimiento ---------------------------- */
 
-seccion("8 · Por qué conviene");
+seccion("7 · Por qué conviene");
 vinetas([
   "El conocimiento se queda en CEDEM. Las clases, la metodología y las transcripciones viven en una base de la firma, no en computadoras personales ni en el chat de alguien.",
   "El coach deja de ser administrador de su propio trabajo: llega a la sesión con el expediente leído y sale con la minuta hecha.",
   "Se puede demostrar el avance: compromisos, tareas de aplicación y temas vistos por alumno, con fecha y evidencia.",
   "El agente cita la fuente: cada afirmación viene de una sesión, de una clase o del material cargado. No inventa.",
   "Los datos están aislados por coach: cada quien ve a sus alumnos; la coordinación ve todo.",
-  "Cuesta la mitad que las cinco licencias de monday.com y no crece con el número de alumnos: la IA se paga por uso, no por persona.",
+  "El costo no crece con el número de alumnos: la inteligencia artificial se paga por uso, no por persona ni por licencia.",
 ]);
 
 salto(4);
@@ -469,7 +461,7 @@ escribir(
 
 /* ---------------------------- Cierre ---------------------------- */
 
-seccion("9 · Qué falta para arrancar");
+seccion("8 · Qué falta para arrancar");
 vinetas([
   "Definir quién es el administrador y crear las cuentas de los cuatro coaches.",
   "Cargar las clases y la metodología del primer semestre.",
