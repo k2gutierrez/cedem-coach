@@ -242,7 +242,7 @@ escribir("Estimación mensual de costos y lo que devuelve a la firma", { size: 1
 salto(14);
 
 escribir(
-  "La plataforma no compite con lo que la firma ya usa: se conecta a monday y a Drive y convierte lo que ahí vive —y lo que se habla en cada sesión— en un expediente consultable. El valor no está en tener otra herramienta, sino en que el conocimiento deje de estar disperso y empiece a acumularse."
+  "La plataforma no compite con lo que la firma ya usa: lee el tablero de monday, enlaza los documentos de Drive que ahí viven y convierte cada sesión en un expediente consultable. El valor no está en tener otra herramienta, sino en que el conocimiento deje de estar disperso y empiece a acumularse."
 );
 salto(10);
 
@@ -437,7 +437,7 @@ salto(6);
 
 seccion("7 · Por qué conviene");
 vinetas([
-  "Se integra, no sustituye: lee el tablero de monday y los documentos de Drive que ya usan, y les agrega lo que hoy no tienen —las sesiones y su seguimiento—.",
+  "Se integra, no sustituye: lee el tablero de monday y pone a la vista los documentos de Drive que ya usan, y les agrega lo que hoy no tienen —las sesiones y su seguimiento—.",
   "Cada coach puede abrir su propia cuenta de ChatGPT o Gemini; el problema es que lo que genera se queda ahí: no se comparte con el equipo, no se liga al alumno y no se puede auditar. Aquí todo queda en la misma base, del mismo lado.",
   "El coach deja de ser administrador de su propio trabajo: llega a la sesión con el expediente leído y sale con la minuta hecha.",
   "Se puede demostrar el avance: compromisos, tareas de aplicación y temas vistos por alumno, con fecha y evidencia.",
