@@ -70,13 +70,17 @@ export default async function PaginaMonday({
           )}
 
           {tablero.elementos.map((elemento) => (
-            <article key={elemento.id} className="tarjeta" style={{ padding: 20 }}>
+            <article key={elemento.id} className="tarjeta" style={{ padding: 16 }}>
               <header className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-lg font-bold">{elemento.nombre}</h3>
-                {elemento.grupo && <span className="etiqueta">{elemento.grupo}</span>}
+                <h3 className="text-[1.02rem] font-semibold leading-snug">{elemento.nombre}</h3>
+                {elemento.grupo && (
+                  <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--texto-suave)]">
+                    {elemento.grupo}
+                  </span>
+                )}
               </header>
 
-              <dl className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
+              <dl className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-3">
                 {elemento.columnas.map((columna) => (
                   <div
                     key={columna.id}
@@ -84,7 +88,7 @@ export default async function PaginaMonday({
                       columna.tipo === "file" || columna.titulo === "Observaciones" ? "sm:col-span-2" : ""
                     }
                   >
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--texto-suave)]">
+                    <dt className="text-[0.68rem] font-semibold uppercase tracking-wider text-[var(--texto-suave)]">
                       {columna.titulo}
                     </dt>
                     <dd className="mt-1">
@@ -108,14 +112,11 @@ export default async function PaginaMonday({
                             {columna.valor}
                           </span>
                         ) : (
-                          <span className="text-[0.95rem]">
-                            {columna.valor}
-                            {columna.titulo === "Duración" ? " h" : ""}
-                          </span>
+                          <span className="text-[0.9rem]">{columna.valor}</span>
                         ))}
 
                       {columna.recursos.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-2">
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
                           {columna.recursos.map((recurso, i) => {
                             const descarga = ligaDeDescarga(recurso.url);
                             return (
@@ -124,7 +125,7 @@ export default async function PaginaMonday({
                                   href={recurso.url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="btn btn-suave rounded-none border-0"
+                                  className="btn btn-suave rounded-none border-0 px-3 py-1.5 text-[0.85rem]"
                                 >
                                   {columna.tipo === "file" ? "↗" : "↗"} {recurso.etiqueta}
                                 </a>
@@ -133,7 +134,7 @@ export default async function PaginaMonday({
                                     href={descarga}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="btn btn-suave rounded-none border-0 border-l border-[var(--borde)]"
+                                    className="btn btn-suave rounded-none border-0 border-l border-[var(--borde)] px-3 py-1.5 text-[0.85rem]"
                                     title="Descargar"
                                   >
                                     ↓ Descargar

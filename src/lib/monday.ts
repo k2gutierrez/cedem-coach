@@ -87,17 +87,10 @@ function enlacesDe(texto: string): string[] {
 }
 
 /** Orden en el que conviene mostrar las columnas del tablero de CEDEM. */
-const ORDEN = [
-  "Estado",
-  "Fecha",
-  "Horario",
-  "Duración",
-  "Expositor",
-  "Video",
-  "Documentos",
-  "Observaciones",
-  "Nombre",
-];
+const ORDEN = ["Fecha", "Expositor", "Video", "Documentos", "Observaciones", "Nombre"];
+
+/** Columnas que no se muestran en la app (se conservan en monday). */
+const OCULTAS = new Set(["Estado", "Horario", "Duración", "Subtareas", "Link to INDUCCIÓN COACHES 26-27"]);
 
 function peso(titulo: string) {
   const i = ORDEN.indexOf(titulo);
@@ -273,9 +266,19 @@ export async function consultarTablero(id: string, limite = 100, forzar = false)
           let valor = urls.length && texto.replace(/https?:\/\/\S+/g, "").replace(/[-,|\s]+/g, "").length < 3 ? "" : texto;
           if (tipoColumna === "timeline") valor = fechaLegible(texto);
 
-          return { id: v.id, titulo, tipo: tipoColumna, valor, urls, recursos, archivos };
+          // En "Video" basta un botón: no se muestra la liga ni el nombre del archivo.
+          const esVideo = titulo === "Video";
+          return {
+            id: v.id,
+            titulo,
+            tipo: tipoColumna,
+            valor: esVideo ? "" : valor,
+            urls,
+            recursos: esVideo ? recursos.map((r) => ({ ...r, etiqueta: "Ver video" })) : recursos,
+            archivos,
+          };
         })
-        .filter((c) => c.valor || c.urls.length)
+        .filter((c) => (c.valor || c.urls.length) && !OCULTAS.has(c.titulo))
         .sort((a, b) => peso(a.titulo) - peso(b.titulo));
 
       if (item.assets?.length) {
