@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { consultarTablero, mondayConfigurado, tablerosConfigurados } from "@/lib/monday";
+import { consultarTablero, ligaDeDescarga, mondayConfigurado, tablerosConfigurados } from "@/lib/monday";
 import { usuarioDePagina } from "@/lib/sesion";
 
 export const instant = false;
@@ -78,7 +78,12 @@ export default async function PaginaMonday({
 
               <dl className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
                 {elemento.columnas.map((columna) => (
-                  <div key={columna.id} className={columna.tipo === "file" ? "sm:col-span-2" : ""}>
+                  <div
+                    key={columna.id}
+                    className={
+                      columna.tipo === "file" || columna.titulo === "Observaciones" ? "sm:col-span-2" : ""
+                    }
+                  >
                     <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--texto-suave)]">
                       {columna.titulo}
                     </dt>
@@ -103,22 +108,40 @@ export default async function PaginaMonday({
                             {columna.valor}
                           </span>
                         ) : (
-                          <span className="text-[0.95rem]">{columna.valor}</span>
+                          <span className="text-[0.95rem]">
+                            {columna.valor}
+                            {columna.titulo === "Duración" ? " h" : ""}
+                          </span>
                         ))}
 
                       {columna.recursos.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-2">
-                          {columna.recursos.map((recurso, i) => (
-                            <a
-                              key={`${recurso.url}-${i}`}
-                              href={recurso.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="btn btn-suave"
-                            >
-                              {columna.tipo === "file" ? "↓" : "↗"} {recurso.etiqueta}
-                            </a>
-                          ))}
+                          {columna.recursos.map((recurso, i) => {
+                            const descarga = ligaDeDescarga(recurso.url);
+                            return (
+                              <span key={`${recurso.url}-${i}`} className="inline-flex overflow-hidden rounded-xl border border-[var(--borde)]">
+                                <a
+                                  href={recurso.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn btn-suave rounded-none border-0"
+                                >
+                                  {columna.tipo === "file" ? "↗" : "↗"} {recurso.etiqueta}
+                                </a>
+                                {descarga && (
+                                  <a
+                                    href={descarga}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn btn-suave rounded-none border-0 border-l border-[var(--borde)]"
+                                    title="Descargar"
+                                  >
+                                    ↓ Descargar
+                                  </a>
+                                )}
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
 

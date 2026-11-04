@@ -318,3 +318,25 @@ export async function consultarTablero(id: string, limite = 100, forzar = false)
 export function esEnlaceDeNube(url: string) {
   return esDrive(url);
 }
+
+/**
+ * Liga de descarga directa cuando se puede: archivos de Drive y documentos de
+ * Google. Devuelve null si no hay forma de bajarlo sin pasar por el visor.
+ */
+export function ligaDeDescarga(url: string): string | null {
+  const archivo = url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{10,})/);
+  if (archivo) return `https://drive.google.com/uc?export=download&id=${archivo[1]}`;
+
+  const conId = url.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  if (conId && /drive\.google\.com/.test(url)) {
+    return `https://drive.google.com/uc?export=download&id=${conId[1]}`;
+  }
+
+  const doc = url.match(/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([A-Za-z0-9_-]{10,})/);
+  if (doc) {
+    const tipo = doc[1] === "document" ? "document" : doc[1] === "spreadsheets" ? "spreadsheets" : "presentation";
+    return `https://docs.google.com/${tipo}/d/${doc[2]}/export?format=pdf`;
+  }
+
+  return null;
+}
