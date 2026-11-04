@@ -70,9 +70,9 @@ export default async function PaginaMonday({
           )}
 
           {tablero.elementos.map((elemento) => (
-            <article key={elemento.id} className="tarjeta" style={{ padding: 16 }}>
+            <article key={elemento.id} className="tarjeta" style={{ padding: 14 }}>
               <header className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-[1.02rem] font-semibold leading-snug">{elemento.nombre}</h3>
+                <h3 className="text-[0.95rem] font-semibold leading-snug">{elemento.nombre}</h3>
                 {elemento.grupo && (
                   <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--texto-suave)]">
                     {elemento.grupo}
@@ -80,7 +80,7 @@ export default async function PaginaMonday({
                 )}
               </header>
 
-              <dl className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-3">
+              <dl className="mt-2.5 grid gap-x-6 gap-y-2.5 sm:grid-cols-3">
                 {elemento.columnas.map((columna) => (
                   <div
                     key={columna.id}
@@ -88,7 +88,7 @@ export default async function PaginaMonday({
                       columna.tipo === "file" || columna.titulo === "Observaciones" ? "sm:col-span-2" : ""
                     }
                   >
-                    <dt className="text-[0.68rem] font-semibold uppercase tracking-wider text-[var(--texto-suave)]">
+                    <dt className="text-[0.62rem] font-semibold uppercase tracking-wider text-[var(--texto-suave)]">
                       {columna.titulo}
                     </dt>
                     <dd className="mt-1">
@@ -112,7 +112,7 @@ export default async function PaginaMonday({
                             {columna.valor}
                           </span>
                         ) : (
-                          <span className="text-[0.9rem]">{columna.valor}</span>
+                          <span className="text-[0.88rem]">{columna.valor}</span>
                         ))}
 
                       {columna.recursos.length > 0 && (
