@@ -83,19 +83,44 @@ export default async function PaginaMonday({
                       {columna.titulo}
                     </dt>
                     <dd className="mt-1">
-                      {columna.valor && <span className="text-[0.95rem]">{columna.valor}</span>}
+                      {columna.valor &&
+                        (columna.titulo === "Estado" ? (
+                          <span
+                            className="etiqueta"
+                            style={{
+                              background: /listo|complet|hecho/i.test(columna.valor)
+                                ? "#e6f6ec"
+                                : /curso|proceso/i.test(columna.valor)
+                                  ? "#fff4e0"
+                                  : "#eef1f6",
+                              color: /listo|complet|hecho/i.test(columna.valor)
+                                ? "#17663a"
+                                : /curso|proceso/i.test(columna.valor)
+                                  ? "#8a5300"
+                                  : "#44506a",
+                            }}
+                          >
+                            {columna.valor}
+                          </span>
+                        ) : (
+                          <span className="text-[0.95rem]">{columna.valor}</span>
+                        ))}
 
-                      {columna.urls.map((url) => (
-                        <a
-                          key={url}
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="ml-2 inline-flex items-center gap-1 font-semibold text-[var(--azul)] underline"
-                        >
-                          Abrir enlace ↗
-                        </a>
-                      ))}
+                      {columna.recursos.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {columna.recursos.map((recurso, i) => (
+                            <a
+                              key={`${recurso.url}-${i}`}
+                              href={recurso.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn btn-suave"
+                            >
+                              {columna.tipo === "file" ? "↓" : "↗"} {recurso.etiqueta}
+                            </a>
+                          ))}
+                        </div>
+                      )}
 
                       {columna.archivos.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">

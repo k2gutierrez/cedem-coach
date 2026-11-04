@@ -9,12 +9,15 @@ import { db } from "./supabase";
 
 const URL_API = "https://api.monday.com/v2";
 
+export type Recurso = { etiqueta: string; url: string };
+
 export type Columna = {
   id: string;
   titulo: string;
   tipo: string;
   valor: string;
   urls: string[];
+  recursos: Recurso[];
   archivos: Archivo[];
 };
 
@@ -81,6 +84,57 @@ const CONSULTA = `
 function enlacesDe(texto: string): string[] {
   const encontrados = texto.match(/https?:\/\/[^\s,;)]+/g) ?? [];
   return [...new Set(encontrados.map((u) => u.replace(/[.,;]$/, "")))];
+}
+
+/** Orden en el que conviene mostrar las columnas del tablero de CEDEM. */
+const ORDEN = [
+  "Estado",
+  "Fecha",
+  "Horario",
+  "Duración",
+  "Expositor",
+  "Video",
+  "Documentos",
+  "Observaciones",
+  "Nombre",
+];
+
+function peso(titulo: string) {
+  const i = ORDEN.indexOf(titulo);
+  return i === -1 ? 99 : i;
+}
+
+function etiquetaDe(texto: string, url: string, indice: number, tipo: string) {
+  const sinUrl = texto.replace(url, "").replace(/[-,|]+\s*$/, "").trim();
+  if (sinUrl.length >= 3 && sinUrl.length <= 70) return sinUrl;
+  if (tipo === "file") return indice === 0 ? "Abrir documento" : `Documento ${indice + 1}`;
+  return indice === 0 ? "Abrir enlace" : `Enlace ${indice + 1}`;
+}
+
+const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+/** "2026-10-06 - 2026-10-06" → "6 de octubre" (o el rango si son distintos). */
+function fechaLegible(texto: string) {
+  const fechas = texto.match(/\d{4}-\d{2}-\d{2}/g);
+  if (!fechas?.length) return texto;
+
+  const partes = (iso: string) => {
+    const [anio, mes, dia] = iso.split("-").map(Number);
+    return { anio, mes: MESES[mes - 1] ?? "", dia };
+  };
+
+  const [desde, hasta] = [partes(fechas[0]), partes(fechas[fechas.length - 1])];
+
+  if (fechas.length === 1 || fechas[0] === fechas[fechas.length - 1]) {
+    return `${desde.dia} de ${desde.mes} de ${desde.anio}`;
+  }
+  if (desde.mes === hasta.mes && desde.anio === hasta.anio) {
+    return `${desde.dia} al ${hasta.dia} de ${desde.mes} de ${desde.anio}`;
+  }
+  return `${desde.dia} de ${desde.mes} al ${hasta.dia} de ${hasta.mes} de ${hasta.anio}`;
 }
 
 function esDrive(url: string) {
@@ -210,10 +264,19 @@ export async function consultarTablero(id: string, limite = 100, forzar = false)
           }
 
           const archivos: Archivo[] = [];
+          const recursos: Recurso[] = urls.map((url, i) => ({
+            url,
+            etiqueta: etiquetaDe(texto, url, i, tipoColumna),
+          }));
 
-          return { id: v.id, titulo, tipo: tipoColumna, valor: texto, urls, archivos };
+          // En columnas de enlace o archivo el texto suele ser la propia liga.
+          let valor = urls.length && texto.replace(/https?:\/\/\S+/g, "").replace(/[-,|\s]+/g, "").length < 3 ? "" : texto;
+          if (tipoColumna === "timeline") valor = fechaLegible(texto);
+
+          return { id: v.id, titulo, tipo: tipoColumna, valor, urls, recursos, archivos };
         })
-        .filter((c) => c.valor || c.urls.length);
+        .filter((c) => c.valor || c.urls.length)
+        .sort((a, b) => peso(a.titulo) - peso(b.titulo));
 
       if (item.assets?.length) {
         propias.push({
@@ -222,6 +285,7 @@ export async function consultarTablero(id: string, limite = 100, forzar = false)
           tipo: "file",
           valor: "",
           urls: [],
+          recursos: [],
           archivos: item.assets.map((a) => ({
             id: a.id,
             nombre: a.name,
