@@ -45,10 +45,10 @@ function costoMXN({ entrada = 0, salida = 0, busquedas = 0 }) {
 }
 
 const VOLUMEN = {
-  analisis: 20, // 4 coaches × 5 alumnos
-  ajuste: 20, // una corrección por sesión
+  analisis: 40, // 4 coaches × 5 alumnos × 2 sesiones al mes
+  ajuste: 40, // una corrección por sesión
   consejo: 4, // uno al mes por coach
-  chat: 120, // ~6 mensajes por sesión
+  chat: 240, // ~6 mensajes por sesión
   brief: 20 / 12, // 20 alumnos al año, prorrateado
 };
 
@@ -242,7 +242,7 @@ escribir("Estimación mensual de costos y lo que devuelve a la firma", { size: 1
 salto(14);
 
 escribir(
-  "Una plataforma propia hace lo que ninguna herramienta de organización hace: leer la sesión, escribir la minuta, seguir los compromisos y conocer la metodología de la firma. Y cuesta menos que una hora de coach al mes."
+  "La plataforma no compite con lo que la firma ya usa: se conecta a monday y a Drive y convierte lo que ahí vive —y lo que se habla en cada sesión— en un expediente consultable. El valor no está en tener otra herramienta, sino en que el conocimiento deje de estar disperso y empiece a acumularse."
 );
 salto(10);
 
@@ -259,7 +259,7 @@ tabla(
   [
     ["Coaches", "4"],
     ["Alumnos por coach", "5 (20 en total)"],
-    ["Sesiones individuales", "1 al mes por alumno, 2 horas"],
+    ["Sesiones individuales", "2 al mes por alumno, 1 hora cada una"],
     ["Consejo", "1 al mes por coach, 4 horas"],
     ["Clases del máster", "4 al mes, 11 meses"],
     ["Audio", "No se usa: todo entra como transcripción o documento"],
@@ -437,12 +437,14 @@ salto(6);
 
 seccion("7 · Por qué conviene");
 vinetas([
-  "El conocimiento se queda en CEDEM. Las clases, la metodología y las transcripciones viven en una base de la firma, no en computadoras personales ni en el chat de alguien.",
+  "Se integra, no sustituye: lee el tablero de monday y los documentos de Drive que ya usan, y les agrega lo que hoy no tienen —las sesiones y su seguimiento—.",
+  "Cada coach puede abrir su propia cuenta de ChatGPT o Gemini; el problema es que lo que genera se queda ahí: no se comparte con el equipo, no se liga al alumno y no se puede auditar. Aquí todo queda en la misma base, del mismo lado.",
   "El coach deja de ser administrador de su propio trabajo: llega a la sesión con el expediente leído y sale con la minuta hecha.",
   "Se puede demostrar el avance: compromisos, tareas de aplicación y temas vistos por alumno, con fecha y evidencia.",
   "El agente cita la fuente: cada afirmación viene de una sesión, de una clase o del material cargado. No inventa.",
   "Los datos están aislados por coach: cada quien ve a sus alumnos; la coordinación ve todo.",
-  "El costo no crece con el número de alumnos: la inteligencia artificial se paga por uso, no por persona ni por licencia.",
+  "El costo no crece por persona: la inteligencia artificial se paga por uso, no por licencia. Con dos sesiones al mes por alumno, la IA sigue representando menos del 2% del total.",
+  "Lo que se acumula no es información suelta: es el historial de cómo la firma acompaña a cada alumno, reutilizable en la siguiente generación.",
 ]);
 
 salto(4);
@@ -455,18 +457,16 @@ escribir(
 destacado("Costo de todo el año", `${mxn(TOTAL * 12)} MXN`, "12 meses con estos supuestos");
 
 escribir(
-  `Es el equivalente a ${Math.round((TOTAL * 12) / 500)} horas de trabajo de un coach. Al mes se ahorran 16. Si la plataforma se usa un solo mes, ya se pagó.`,
+  `Es el equivalente a ${Math.round((TOTAL * 12) / 500)} horas de trabajo de un coach. Al mes se ahorran ${Math.round(horasMes)}. Si la plataforma se usa un solo mes, ya se pagó.`,
   { size: 10.5, font: negrita, color: AZUL }
 );
 
 /* ---------------------------- Cierre ---------------------------- */
 
-seccion("8 · Qué falta para arrancar");
+seccion("8 · Lo que pedimos");
 vinetas([
-  "Definir quién es el administrador y crear las cuentas de los cuatro coaches.",
-  "Cargar las clases y la metodología del primer semestre.",
-  "Definir un tope de gasto mensual en la consola de DeepSeek, para que el costo nunca sorprenda.",
-  "Capacitar a los coaches en una sesión de 30 minutos.",
+  "Un presupuesto mensual de $1,000 MXN para el manejo de inteligencia artificial y el hosting en Amplify. El cálculo de este documento da alrededor de $600 MXN; el resto es margen para meses con más uso o más tráfico.",
+  "Un subdominio de cedem.com.mx. Si no está disponible en GoDaddy, se puede registrar un dominio directo en AWS, con un costo anual aproximado de 30 a 60 USD.",
 ]);
 
 pie();
