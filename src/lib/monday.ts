@@ -1,3 +1,5 @@
+import { db } from "./supabase";
+
 /**
  * Lectura de tableros de monday.com.
  *
@@ -97,9 +99,49 @@ export function mondayConfigurado(): boolean {
   return Boolean(process.env.MONDAY_API_TOKEN);
 }
 
-/** Caché en memoria: evita pedirle el tablero a monday en cada visita. */
-const CACHE_MS = 3 * 60 * 1000;
+/**
+ * Caché de 30 minutos. Vive en la base para que valga igual entre servidores:
+ * monday se consulta como mucho dos veces por hora y tablero.
+ */
+const CACHE_MS = 30 * 60 * 1000;
 const cache = new Map<string, { cuando: number; datos: Tablero }>();
+let cacheEnBase = true;
+
+async function leerCache(id: string): Promise<Tablero | null> {
+  if (!cacheEnBase) {
+    const guardado = cache.get(id);
+    if (guardado && Date.now() - guardado.cuando < CACHE_MS) return guardado.datos;
+    return null;
+  }
+
+  const { data, error } = await db
+    .from("monday_cache")
+    .select("datos, actualizado_en")
+    .eq("tablero_id", id)
+    .maybeSingle();
+
+  if (error) {
+    // Si la tabla todavía no existe, se sigue con la memoria.
+    cacheEnBase = false;
+    const guardado = cache.get(id);
+    return guardado && Date.now() - guardado.cuando < CACHE_MS ? guardado.datos : null;
+  }
+
+  if (!data) return null;
+  const edad = Date.now() - new Date(data.actualizado_en).getTime();
+  return edad < CACHE_MS ? ({ ...(data.datos as Tablero), consultado: data.actualizado_en } as Tablero) : null;
+}
+
+async function guardarCache(id: string, datos: Tablero) {
+  cache.set(id, { cuando: Date.now(), datos });
+  if (!cacheEnBase) return;
+
+  const { error } = await db
+    .from("monday_cache")
+    .upsert({ tablero_id: id, datos, actualizado_en: new Date().toISOString() }, { onConflict: "tablero_id" });
+
+  if (error) cacheEnBase = false;
+}
 
 export async function consultarTablero(id: string, limite = 100, forzar = false): Promise<Tablero> {
   const token = process.env.MONDAY_API_TOKEN;
@@ -115,8 +157,10 @@ export async function consultarTablero(id: string, limite = 100, forzar = false)
 
   if (!token) return { ...vacio, error: "Falta configurar monday (MONDAY_API_TOKEN)." };
 
-  const guardado = cache.get(id);
-  if (!forzar && guardado && Date.now() - guardado.cuando < CACHE_MS) return guardado.datos;
+  if (!forzar) {
+    const guardado = await leerCache(id);
+    if (guardado) return guardado;
+  }
 
   try {
     const r = await fetch(URL_API, {
@@ -200,7 +244,7 @@ export async function consultarTablero(id: string, limite = 100, forzar = false)
       consultado: new Date().toISOString(),
     };
 
-    cache.set(id, { cuando: Date.now(), datos });
+    await guardarCache(id, datos);
     return datos;
   } catch (e) {
     return { ...vacio, error: `No se pudo consultar monday: ${(e as Error).message}` };

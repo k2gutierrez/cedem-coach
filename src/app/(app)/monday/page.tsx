@@ -4,6 +4,15 @@ import { usuarioDePagina } from "@/lib/sesion";
 
 export const instant = false;
 
+const hace = (iso: string) => {
+  const minutos = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutos < 1) return "hace un momento";
+  if (minutos === 1) return "hace 1 minuto";
+  if (minutos < 60) return `hace ${minutos} minutos`;
+  const horas = Math.round(minutos / 60);
+  return horas === 1 ? "hace 1 hora" : `hace ${horas} horas`;
+};
+
 const kilo = (bytes: number) => (bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
 export default async function PaginaMonday({
@@ -49,8 +58,7 @@ export default async function PaginaMonday({
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-xl font-bold">{tablero.nombre}</h2>
             <span className="text-sm text-[var(--texto-suave)]">
-              {tablero.total} elementos · leído{" "}
-              {new Date(tablero.consultado).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+              {tablero.total} elementos · actualizado {hace(tablero.consultado)}
             </span>
           </div>
 
@@ -119,7 +127,8 @@ export default async function PaginaMonday({
       ))}
 
       <p className="text-sm text-[var(--texto-suave)]">
-        Se lee directo del tablero cada tres minutos.{" "}
+        Se consulta al entrar y como mucho cada 30 minutos; si necesitas lo más reciente, usa
+        Actualizar.{" "}
         <Link href="/chat" className="underline">
           Pregúntale al agente
         </Link>{" "}
