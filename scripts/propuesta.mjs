@@ -242,7 +242,7 @@ escribir("Estimación mensual de costos y lo que devuelve a la firma", { size: 1
 salto(14);
 
 escribir(
-  "La plataforma no compite con lo que la firma ya usa: lee el tablero de monday, enlaza los documentos de Drive que ahí viven y convierte cada sesión en un expediente consultable. El valor no está en tener otra herramienta, sino en que el conocimiento deje de estar disperso y empiece a acumularse."
+  "La plataforma no compite con lo que la firma ya usa: lee el tablero de monday, enlaza los documentos de Drive y convierte cada sesión en un expediente consultable y auditable. El valor no está en guardar más información, sino en que todo quede en una base propia, con fecha, autor y fuente, lista para explotarse."
 );
 salto(10);
 
@@ -437,14 +437,16 @@ salto(6);
 
 seccion("7 · Por qué conviene");
 vinetas([
-  "Se integra, no sustituye: lee el tablero de monday y pone a la vista los documentos de Drive que ya usan, y les agrega lo que hoy no tienen —las sesiones y su seguimiento—.",
-  "Cada coach puede abrir su propia cuenta de ChatGPT o Gemini; el problema es que lo que genera se queda ahí: no se comparte con el equipo, no se liga al alumno y no se puede auditar. Aquí todo queda en la misma base, del mismo lado.",
+  "Se puede auditar: cada minuta, compromiso y tarea guarda fecha, autor y fuente. Se puede reconstruir qué se le dijo a un alumno, cuándo y con qué fundamento.",
+  "Lo que monday no captura es la sesión: la conversación, el compromiso y si se cumplió. Eso es lo que aquí queda registrado y ligado al expediente.",
+  "Cada coach puede abrir su propia cuenta de ChatGPT o Gemini; el problema es que lo que genera se queda ahí: no se comparte, no se liga al alumno y no se puede auditar. Aquí todo cae en la misma base, del mismo lado.",
   "El coach deja de ser administrador de su propio trabajo: llega a la sesión con el expediente leído y sale con la minuta hecha.",
   "Se puede demostrar el avance: compromisos, tareas de aplicación y temas vistos por alumno, con fecha y evidencia.",
   "El agente cita la fuente: cada afirmación viene de una sesión, de una clase o del material cargado. No inventa.",
   "Los datos están aislados por coach: cada quien ve a sus alumnos; la coordinación ve todo.",
   "El costo no crece por persona: la inteligencia artificial se paga por uso, no por licencia. Con dos sesiones al mes por alumno, la IA sigue representando menos del 2% del total.",
-  "Lo que se acumula no es información suelta: es el historial de cómo la firma acompaña a cada alumno, reutilizable en la siguiente generación.",
+  "Todo vive en una base de datos propia y estructurada, lista para exportar a Excel o a otra herramienta cuando la firma quiera.",
+  "Esa base es la materia prima de los siguientes productos de IA: comparar generaciones, detectar temas recurrentes y generar informes para la dirección sin volver a capturar nada.",
 ]);
 
 salto(4);
@@ -463,11 +465,41 @@ escribir(
 
 /* ---------------------------- Cierre ---------------------------- */
 
-seccion("8 · Lo que pedimos");
+seccion("8 · Los datos y su respaldo");
 vinetas([
-  "Un presupuesto mensual de $1,000 MXN para el manejo de inteligencia artificial y el hosting en Amplify. El cálculo de este documento da alrededor de $600 MXN; el resto es margen para meses con más uso o más tráfico.",
+  "La base es de CEDEM: Postgres en Supabase, plan Pro. No está en una herramienta ajena ni en la cuenta de un proveedor.",
+  "El plan Pro incluye respaldo automático diario con siete días de retención. La versión gratuita no respalda nada y se pausa tras una semana sin uso: por eso el presupuesto ya contempla el plan pagado.",
+  "Los archivos viven en almacenamiento privado y se entregan con ligas firmadas que caducan a la hora.",
+  "Todo se puede exportar a CSV, Excel o JSON en cualquier momento. No hay candado: si mañana la firma quiere otro sistema, se lleva los datos.",
+]);
+
+nota(
+  "Si más adelante se quisiera recuperación al segundo (PITR), Supabase la cobra aparte, alrededor de 100 USD al mes para siete días. No hace falta al inicio: el respaldo diario cubre el caso normal."
+);
+
+seccion("9 · Lo que pedimos");
+vinetas([
+  "Un presupuesto mensual de $1,000 MXN para inteligencia artificial, hosting en Amplify y la base de datos con respaldo diario. El cálculo de este documento da alrededor de $600 MXN; el resto es margen para meses con más uso o más tráfico.",
   "Un subdominio de cedem.com.mx. Si no está disponible en GoDaddy, se puede registrar un dominio directo en AWS, con un costo anual aproximado de 30 a 60 USD.",
 ]);
+
+salto(6);
+destacado("Inversión mensual solicitada", "$1,000 MXN", "IA, hosting y base de datos con respaldo diario");
+
+escribir("Qué recibe la firma a cambio", { size: 11, font: negrita, color: AZUL });
+salto(2);
+vinetas([
+  "La plataforma operando, con las cuentas de los cuatro coaches y sus alumnos.",
+  "La metodología indexada y consultable, con la fuente a la mano en cada respuesta.",
+  "Una base de datos propia, con respaldo diario y exportable en cualquier momento.",
+  "El expediente de cada alumno: sesiones, compromisos, tareas y documentos en un solo lugar.",
+]);
+
+salto(4);
+escribir(
+  "No es el costo de una herramienta más: es el costo de que la firma empiece a acumular datos de consultoría estructurados, que hoy se pierden en minutas sueltas.",
+  { size: 10.5, font: negrita, color: AZUL }
+);
 
 pie();
 const bytes = await pdf.save();
