@@ -495,21 +495,58 @@ escribir(
 
 /* ---------------------------- Cierre ---------------------------- */
 
-seccion("8 · Los datos y su respaldo");
+nueva();
+seccion("8 · Privacidad de lo que se analiza");
+escribir(
+  "Todo el análisis —resúmenes, minutas, chat y brief— pasa por la API de OpenAI, no por la versión de consumo de ChatGPT. Es una diferencia importante: la versión de consumo puede usar lo que se escribe para entrenar; la API, no.",
+  { size: 10.5 }
+);
+salto(6);
+
+const PUNTOS_PRIVACIDAD = [
+  [
+    "¿Se entrena con los datos?",
+    "No. Desde el 1 de marzo de 2023, el contenido enviado a la API no se usa para entrenar ni mejorar los modelos.",
+  ],
+  [
+    "¿Cuánto se conserva?",
+    "Los registros de abuso se guardan 30 días. La retención cero existe y se puede solicitar a OpenAI.",
+  ],
+  [
+    "¿Se envía el expediente completo?",
+    "No. Se manda solo el fragmento necesario: una muestra de la transcripción o el resumen, nunca la base entera.",
+  ],
+  [
+    "¿Quién revisa las respuestas?",
+    "Nadie fuera de CEDEM. Los revisores humanos existen en la capa gratuita de otros proveedores, no en esta API.",
+  ],
+  ["¿Dónde está la política?", "platform.openai.com/docs/guides/your-data"],
+];
+
+for (const [pregunta, respuesta] of PUNTOS_PRIVACIDAD) {
+  asegurar(34);
+  escribir(pregunta, { size: 9.8, font: negrita, color: AZUL });
+  escribir(respuesta, { size: 9.8, sangria: 10 });
+  salto(3);
+}
+
+nota(
+  "Las transcripciones completas viven en la base de CEDEM; a la API solo va el fragmento que se necesita para cada tarea. Si un alumno pide que se borre su información, se borra en la base y no queda copia en la aplicación."
+);
+
+seccion("9 · Los datos y su respaldo");
 vinetas([
   "La base es de CEDEM: Postgres en Supabase, plan Pro. No está en una herramienta ajena ni en la cuenta de un proveedor.",
   "El plan Pro incluye respaldo automático diario con siete días de retención. La versión gratuita no respalda nada y se pausa tras una semana sin uso: por eso el presupuesto ya contempla el plan pagado.",
   "Los archivos viven en almacenamiento privado y se entregan con ligas firmadas que caducan a la hora.",
   "Todo se puede exportar a CSV, Excel o JSON en cualquier momento. No hay candado: si mañana la firma quiere otro sistema, se lleva los datos.",
-  "La inteligencia artificial es la API de OpenAI, no la versión de consumo: desde marzo de 2023 el contenido enviado a la API no se usa para entrenar ni mejorar sus modelos, y los registros de abuso se conservan 30 días.",
-  "La política está publicada y es verificable: platform.openai.com/docs/guides/your-data",
 ]);
 
 nota(
   "Si más adelante se quisiera recuperación al segundo (PITR), Supabase la cobra aparte, alrededor de 100 USD al mes para siete días. No hace falta al inicio: el respaldo diario cubre el caso normal."
 );
 
-seccion("9 · Lo que pedimos");
+seccion("10 · Lo que pedimos");
 vinetas([
   "Un presupuesto mensual de $1,000 MXN para inteligencia artificial, hosting en Amplify y la base de datos con respaldo diario. El cálculo de este documento da alrededor de $600 MXN; el resto es margen para meses con más uso o más tráfico.",
   "Un subdominio de cedem.com.mx. Si no está disponible en GoDaddy, se puede registrar un dominio directo en AWS, con un costo anual aproximado de 30 a 60 USD.",
