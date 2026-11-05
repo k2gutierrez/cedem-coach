@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { cabecerasIA, iaConfigurada, modeloTexto, URL_CHAT } from "./ia";
 
 export type Minuta = {
   resumen: string;
@@ -56,7 +57,7 @@ function normalizar(m: Record<string, unknown>, previa: Minuta): Minuta {
 
 /** Reescribe la minuta de una sesión con lo que se habló en el chat. */
 export async function ajustarMinuta(sesionId: string): Promise<{ ok: true; minuta: Minuta } | { ok: false; error: string }> {
-  if (!process.env.DEEPSEEK_API_KEY) return { ok: false, error: "Falta la llave de DeepSeek." };
+  if (!iaConfigurada()) return { ok: false, error: "Falta la llave de OpenAI." };
 
   const { data: sesion } = await db
     .from("sesiones")
@@ -106,14 +107,11 @@ export async function ajustarMinuta(sesionId: string): Promise<{ ok: true; minut
         })),
   };
 
-  const r = await fetch("https://api.deepseek.com/chat/completions", {
+  const r = await fetch(URL_CHAT, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: cabecerasIA(),
     body: JSON.stringify({
-      model: process.env.DEEPSEEK_MODELO_CHAT || "deepseek-flash",
+      model: modeloTexto(),
       temperature: 0.1,
       response_format: { type: "json_object" },
       messages: [

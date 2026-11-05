@@ -1,6 +1,8 @@
 import { db } from "./supabase";
 
-const URL_API = "https://api.deepseek.com/anthropic/v1/messages";
+import { iaConfigurada, modeloTexto } from "./ia";
+
+const URL_RESPUESTAS = "https://api.openai.com/v1/responses";
 
 type Fuente = { titulo: string; url: string };
 
@@ -93,41 +95,51 @@ async function alumnoPorId(alumnoId: string) {
   return data;
 }
 
-function cabeceras(clave: string) {
+function cabecerasIA() {
   return {
-    authorization: `Bearer ${clave}`,
-    "x-api-key": clave,
-    "anthropic-version": "2023-06-01",
-    "content-type": "application/json",
+    Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+    "Content-Type": "application/json",
   };
 }
 
-function textoDe(j: { content?: { type: string; text?: string }[] }) {
-  return (j.content ?? [])
-    .filter((b) => b.type === "text" && b.text)
-    .map((b) => b.text as string)
+type SalidaRespuestas = {
+  output?: {
+    type: string;
+    content?: { type: string; text?: string; annotations?: { url?: string; title?: string }[] }[];
+  }[];
+  error?: { message?: string };
+};
+
+function textoDe(j: SalidaRespuestas) {
+  return (j.output ?? [])
+    .filter((o) => o.type === "message")
+    .flatMap((o) => o.content ?? [])
+    .filter((c) => c.type === "output_text" && c.text)
+    .map((c) => c.text as string)
     .join("\n\n")
     .trim();
 }
 
-function fuentesDe(j: { content?: { type: string; content?: { title?: string; url?: string }[] }[] }) {
+function fuentesDe(j: SalidaRespuestas) {
   const fuentes: Fuente[] = [];
-  for (const bloque of j.content ?? []) {
-    if (bloque.type !== "web_search_tool_result") continue;
-    for (const r of bloque.content ?? []) {
-      if (r?.url && !fuentes.some((f) => f.url === r.url)) {
-        fuentes.push({ titulo: r.title ?? r.url, url: r.url });
+  for (const o of j.output ?? []) {
+    for (const c of o.content ?? []) {
+      for (const a of c.annotations ?? []) {
+        if (a.url && !fuentes.some((f) => f.url === a.url)) {
+          fuentes.push({ titulo: a.title || a.url, url: a.url });
+        }
       }
     }
   }
   return fuentes;
 }
 
+
 /** Paso 1: hechos con fuentes. Rápido (~8 s), sin redactar. */
 export async function buscarHechos(
   alumnoId: string
 ): Promise<{ ok: true; hechos: string; fuentes: Fuente[] } | { ok: false; error: string; codigo?: string }> {
-  if (!process.env.DEEPSEEK_API_KEY) return { ok: false, error: "Falta la llave de DeepSeek." };
+  if (!iaConfigurada()) return { ok: false, error: "Falta la llave de OpenAI." };
 
   const alumno = await alumnoPorId(alumnoId);
   if (!alumno) return { ok: false, error: "Ese alumno no existe.", codigo: "no_existe" };
@@ -139,19 +151,13 @@ export async function buscarHechos(
     };
   }
 
-  const clave = process.env.DEEPSEEK_API_KEY;
-  const r = await fetch(URL_API, {
+  const r = await fetch(URL_RESPUESTAS, {
     method: "POST",
-    headers: cabeceras(clave),
+    headers: cabecerasIA(),
     body: JSON.stringify({
-      model: process.env.DEEPSEEK_MODELO_ANALISIS || "deepseek-flash",
-      max_tokens: 1800,
-      thinking: { type: "disabled" },
-      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
-      messages: [
-        {
-          role: "user",
-          content: `Investiga en la web esta empresa y su sector para preparar a un coach antes de su primera sesión.
+      model: modeloTexto(),
+      tools: [{ type: "web_search" }],
+      input: `Investiga en la web esta empresa y su sector para preparar a un coach antes de su primera sesión.
 
 DATOS
 ${datosDelAlumno(alumno)}
@@ -159,8 +165,6 @@ ${datosDelAlumno(alumno)}
 Devuelve SOLO una lista de 12 a 18 hechos concretos, uno por línea, con [Hecho] y la fuente
 (nombre y URL). No redactes un documento ni des recomendaciones. Si algún dato no lo encuentras,
 no lo inventes.`,
-        },
-      ],
     }),
   });
 
@@ -168,7 +172,7 @@ no lo inventes.`,
     return { ok: false, error: `El buscador no respondió (${r.status}). Intenta de nuevo.` };
   }
 
-  const j = await r.json();
+  const j = (await r.json()) as SalidaRespuestas;
   const hechos = textoDe(j);
   if (hechos.length < 200) {
     return { ok: false, error: "La búsqueda devolvió muy poca información. Intenta de nuevo." };
@@ -183,34 +187,27 @@ export async function redactarBrief(
   hechos: string,
   fuentesExtra: Fuente[] = []
 ): Promise<{ ok: true; brief: ResultadoBrief } | { ok: false; error: string }> {
-  if (!process.env.DEEPSEEK_API_KEY) return { ok: false, error: "Falta la llave de DeepSeek." };
+  if (!iaConfigurada()) return { ok: false, error: "Falta la llave de OpenAI." };
 
   const alumno = await alumnoPorId(alumnoId);
   if (!alumno) return { ok: false, error: "Ese alumno no existe." };
   if (!hechos?.trim()) return { ok: false, error: "Faltan los hechos de la investigación." };
 
-  const clave = process.env.DEEPSEEK_API_KEY;
-  const r = await fetch(URL_API, {
+  const r = await fetch(URL_RESPUESTAS, {
     method: "POST",
-    headers: cabeceras(clave),
+    headers: cabecerasIA(),
     body: JSON.stringify({
-      model: process.env.DEEPSEEK_MODELO_ANALISIS || "deepseek-flash",
-      max_tokens: 4200,
-      thinking: { type: "disabled" },
-      messages: [
-        {
-          role: "user",
-          content: `${INSTRUCCIONES}
+      model: modeloTexto(),
+      max_output_tokens: 4200,
+      input: `${INSTRUCCIONES}
 
 DATOS DEL COACHEE
 ${datosDelAlumno(alumno)}
 
 HECHOS INVESTIGADOS (úsalos como fuente; no inventes nada fuera de aquí)
-${hechos.slice(0, 9000)}
+${hechos.slice(0, 12000)}
 
 Escribe el brief ahora.`,
-        },
-      ],
     }),
   });
 
@@ -218,7 +215,7 @@ Escribe el brief ahora.`,
     return { ok: false, error: `El agente no respondió (${r.status}). Intenta de nuevo.` };
   }
 
-  const j = await r.json();
+  const j = (await r.json()) as SalidaRespuestas;
   const limpio = limpiarBrief(textoDe(j));
 
   if (limpio.length < 400) {

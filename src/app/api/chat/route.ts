@@ -3,6 +3,7 @@ import { db } from "@/lib/supabase";
 import { usuarioActual } from "@/lib/sesion";
 import { tareasConCobertura } from "@/lib/datos";
 import { fragmentosDeTranscripcion } from "@/lib/retrieval";
+import { iaConfigurada, modeloTexto, URL_CHAT } from "@/lib/ia";
 
 export const maxDuration = 60;
 
@@ -146,8 +147,8 @@ function coincideFecha(fecha: string, m: { iso?: string; dia?: string; mes?: str
 export async function POST(req: Request) {
   const usuario = await usuarioActual();
   if (!usuario) return NextResponse.json({ error: "sin_sesion" }, { status: 401 });
-  if (!process.env.DEEPSEEK_API_KEY) {
-    return NextResponse.json({ error: "falta_llave_deepseek" }, { status: 500 });
+  if (!iaConfigurada()) {
+    return NextResponse.json({ error: "falta_llave_ia" }, { status: 500 });
   }
 
   const cuerpo = (await req.json()) as { mensajes?: Mensaje[]; alumnoId?: string | null };
@@ -322,14 +323,14 @@ export async function POST(req: Request) {
     /* sin memoria disponible */
   }
 
-  const r = await fetch("https://api.deepseek.com/chat/completions", {
+  const r = await fetch(URL_CHAT, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.DEEPSEEK_MODELO_CHAT || "deepseek-flash",
+      model: modeloTexto(),
       temperature: 0.3,
       stream: true,
       messages: [

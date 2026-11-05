@@ -22,11 +22,14 @@ const LOGO = fs.readFileSync(path.join(RAIZ, "public", "mief.png"));
 const MXN_POR_CNY = 2.6; // 1 yuan ≈ 2.6 pesos
 const MXN_POR_USD = 18.4;
 
+/* Tarifas de OpenAI, en dólares por millón de tokens. */
 const PRECIO = {
-  entrada: 2, // yuan por millón de tokens (tarifa de pico, deepseek-flash)
-  salida: 8, // yuan por millón
-  busqueda: 5 / 1000, // yuan por búsqueda web
+  entrada: 0.15, // gpt-4o-mini
+  salida: 0.6,
+  busqueda: 0,
 };
+
+const PRECIO_ALTO = { entrada: 2.5, salida: 10 }; // gpt-4o, para la cotización amplia
 
 const OPERACIONES = {
   analisis: { nombre: "Análisis de una sesión", entrada: 3408, salida: 575 },
@@ -36,12 +39,16 @@ const OPERACIONES = {
   brief: { nombre: "Brief de contexto", entrada: 30000, salida: 3000, busquedas: 3 },
 };
 
-function costoMXN({ entrada = 0, salida = 0, busquedas = 0 }) {
-  const yuan =
-    (entrada / 1_000_000) * PRECIO.entrada +
-    (salida / 1_000_000) * PRECIO.salida +
-    busquedas * PRECIO.busqueda;
-  return yuan * MXN_POR_CNY;
+function costoUSD(precio, { entrada = 0, salida = 0 }) {
+  return (entrada / 1_000_000) * precio.entrada + (salida / 1_000_000) * precio.salida;
+}
+
+function costoMXN(operacion) {
+  return costoUSD(PRECIO, operacion) * MXN_POR_USD;
+}
+
+function costoMXNAlto(operacion) {
+  return costoUSD(PRECIO_ALTO, operacion) * MXN_POR_USD;
 }
 
 const VOLUMEN = {
@@ -70,6 +77,12 @@ const INFRA = {
   dominio: (15 * MXN_POR_USD) / 12,
 };
 const TOTAL_INFRA = Object.values(INFRA).reduce((a, b) => a + b, 0);
+const TOTAL_IA_ALTO = Object.entries(VOLUMEN).reduce(
+  (suma, [clave, veces]) => suma + veces * costoMXNAlto(OPERACIONES[clave]),
+  0
+);
+const TOTAL_ALTO = TOTAL_IA_ALTO + TOTAL_INFRA;
+
 const TOTAL = TOTAL_IA + TOTAL_INFRA;
 const TOTAL_3X = TOTAL_IA * 3 + TOTAL_INFRA;
 
@@ -249,7 +262,7 @@ salto(10);
 destacado("Costo total estimado al mes", `${mxn(TOTAL)} MXN`, `≈ ${mxn(TOTAL / MXN_POR_USD)} USD · IA + infraestructura`);
 destacado("Costo de IA por sesión", `${mxn(costoPorSesion)} MXN`, "análisis, minuta y la conversación del coach");
 
-nota("Cifras calculadas con las tarifas públicas de DeepSeek y precios de nube al momento de escribir. Los supuestos están en la página siguiente para poder ajustarlos.");
+nota("Cifras calculadas con las tarifas públicas de OpenAI y precios de nube al momento de escribir. Los supuestos están en la página siguiente para poder ajustarlos.");
 
 /* ---------------------------- Supuestos ---------------------------- */
 
@@ -289,7 +302,7 @@ tabla(
 nota("Entrada y salida son tokens. Un token es más o menos tres cuartos de palabra; 12,000 caracteres de transcripción son unos 3,400 tokens.");
 
 nota(
-  "Precios de referencia: DeepSeek, tarifa de pico, 2 yuanes por millón de tokens de entrada y 8 por millón de salida; búsqueda web 5 yuanes por mil consultas. Tipo de cambio 2.6 MXN por yuan y 18.4 MXN por dólar."
+  "Precios de referencia: OpenAI, gpt-4o-mini, 0.15 USD por millón de tokens de entrada y 0.60 por millón de salida. Tipo de cambio 18.4 MXN por dólar. La búsqueda web del brief se cobra aparte, por consulta."
 );
 
 
@@ -310,6 +323,22 @@ tabla(
 
 escribir(`Total de inteligencia artificial: ${mxn(TOTAL_IA)} MXN al mes.`, { font: negrita, color: VERDE });
 salto(8);
+
+escribir("Dos cotizaciones, según el modelo que se elija", { size: 10.5, font: negrita, color: AZUL });
+salto(3);
+tabla(
+  ["Modelo", "IA al mes", "Total con infraestructura"],
+  [
+    ["gpt-4o-mini (recomendada)", mxn(TOTAL_IA), mxn(TOTAL)],
+    ["gpt-4o (máxima calidad)", mxn(TOTAL_IA_ALTO), mxn(TOTAL_ALTO)],
+  ],
+  [230, 110, 150]
+);
+nota(
+  "La diferencia entre las dos cotizaciones es de " +
+    mxn(TOTAL_ALTO - TOTAL) +
+    " al mes. La recomendada es la primera: cubre el trabajo y deja el presupuesto para crecer."
+);
 
 /* ---------------------------- Infraestructura ---------------------------- */
 
@@ -472,6 +501,8 @@ vinetas([
   "El plan Pro incluye respaldo automático diario con siete días de retención. La versión gratuita no respalda nada y se pausa tras una semana sin uso: por eso el presupuesto ya contempla el plan pagado.",
   "Los archivos viven en almacenamiento privado y se entregan con ligas firmadas que caducan a la hora.",
   "Todo se puede exportar a CSV, Excel o JSON en cualquier momento. No hay candado: si mañana la firma quiere otro sistema, se lleva los datos.",
+  "La inteligencia artificial es la API de OpenAI, no la versión de consumo: desde marzo de 2023 el contenido enviado a la API no se usa para entrenar ni mejorar sus modelos, y los registros de abuso se conservan 30 días.",
+  "La política está publicada y es verificable: platform.openai.com/docs/guides/your-data",
 ]);
 
 nota(

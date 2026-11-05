@@ -1,7 +1,6 @@
 import { ErrorIngesta } from "./extraer";
 import { muestraTranscripcion } from "./retrieval";
-
-const URL_API = "https://api.deepseek.com/chat/completions";
+import { cabecerasIA, iaConfigurada, modeloTexto, URL_CHAT } from "./ia";
 
 export type Hallazgo = { titulo: string; detalle: string; cita?: string };
 export type Compromiso = { texto: string; responsable?: string; fecha?: string | null };
@@ -65,7 +64,7 @@ export async function analizarSesion({
   alumno: AlumnoParaPrompt;
   tareas: { id: string; titulo: string }[];
 }): Promise<Analisis> {
-  if (!process.env.DEEPSEEK_API_KEY) {
+  if (!iaConfigurada()) {
     throw new ErrorIngesta("falta_llave_deepseek", "Falta la llave de DeepSeek en .env.local.");
   }
 
@@ -88,14 +87,11 @@ Transcripción de la sesión:
 ${muestraTranscripcion(transcripcion, 12000)}
 """`;
 
-  const r = await fetch(URL_API, {
+  const r = await fetch(URL_CHAT, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: cabecerasIA(),
     body: JSON.stringify({
-      model: process.env.DEEPSEEK_MODELO_ANALISIS || "deepseek-flash",
+      model: modeloTexto(),
       temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [
