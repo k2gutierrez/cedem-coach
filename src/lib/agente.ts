@@ -65,7 +65,7 @@ export async function analizarSesion({
   tareas: { id: string; titulo: string }[];
 }): Promise<Analisis> {
   if (!iaConfigurada()) {
-    throw new ErrorIngesta("falta_llave_deepseek", "Falta la llave de DeepSeek en .env.local.");
+    throw new ErrorIngesta("falta_llave_ia", "Falta la llave de OpenAI en .env.local.");
   }
 
   const listaTareas = tareas.length
