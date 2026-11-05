@@ -416,19 +416,20 @@ escribir(
 salto(6);
 
 tabla(
-  ["Si la hora del coach cuesta", "Ahorro al mes", "Veces el costo de la app"],
+  ["Lo que el coach deja de escribir", "Al mes"],
   [
-    ["$500 MXN", mxn(horasMes * 500), `${Math.round((horasMes * 500) / TOTAL)}×`],
-    ["$800 MXN", mxn(horasMes * 800), `${Math.round((horasMes * 800) / TOTAL)}×`],
-    ["$1,200 MXN", mxn(horasMes * 1200), `${Math.round((horasMes * 1200) / TOTAL)}×`],
+    ["Minutas de sesión, con compromisos y tareas", String(sesionesMes)],
+    ["Fichas de alumno actualizadas", "20"],
+    ["Resúmenes listos para la junta técnica", "4"],
+    ["Horas de trabajo administrativo", `${Math.round(horasMes)} h`],
   ],
-  [170, 150, 150]
+  [330, 120]
 );
 
 escribir(
-  `Dicho por alumno: ${mxn(TOTAL / 20)} MXN al mes por cada uno de los 20 alumnos, o ${mxn(
+  `Repartido entre los 20 alumnos, cada uno cuesta ${mxn(TOTAL / 20)} MXN al mes. Y cada sesión documentada, ${mxn(
     TOTAL / sesionesMes
-  )} MXN por cada sesión documentada. Menos que el café de una reunión.`,
+  )} MXN.`,
   { size: 10.5, font: negrita, color: AZUL }
 );
 salto(6);
@@ -451,7 +452,7 @@ vinetas([
 
 salto(4);
 escribir(
-  "La decisión no es entre una app y una hoja de cálculo: es entre seguir pagando horas de trabajo administrativo todos los meses, o invertir el equivalente a dos comidas de equipo en que ese trabajo lo haga el sistema.",
+  "La decisión no es entre una aplicación y una hoja de cálculo: es entre que el trabajo administrativo siga consumiendo horas de coach todos los meses, o que lo haga el sistema y esas horas se dediquen a acompañar.",
   { size: 10.5, font: negrita, color: AZUL }
 );
 
@@ -459,7 +460,7 @@ escribir(
 destacado("Costo de todo el año", `${mxn(TOTAL * 12)} MXN`, "12 meses con estos supuestos");
 
 escribir(
-  `Es el equivalente a ${Math.round((TOTAL * 12) / 500)} horas de trabajo de un coach. Al mes se ahorran ${Math.round(horasMes)}. Si la plataforma se usa un solo mes, ya se pagó.`,
+  `Al mes devuelve ${Math.round(horasMes)} horas de trabajo administrativo y ${sesionesMes} documentos que hoy se escriben a mano.`,
   { size: 10.5, font: negrita, color: AZUL }
 );
 
