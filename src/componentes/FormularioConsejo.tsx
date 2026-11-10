@@ -34,7 +34,10 @@ export default function FormularioConsejo() {
           <select id="c-duracion" name="duracion" defaultValue="120">
             <option value="90">1 hora y media</option>
             <option value="120">2 horas</option>
+            <option value="150">2 horas y media</option>
             <option value="180">3 horas</option>
+            <option value="210">3 horas y media</option>
+            <option value="240">4 horas</option>
           </select>
         </div>
         <button type="submit" className="btn btn-primario" disabled={pendiente}>
