@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AccionesSesion } from "@/componentes/AccionesAlumno";
 import AnalizadorPendiente from "@/componentes/AnalizadorPendiente";
 import FormularioConsejo from "@/componentes/FormularioConsejo";
+import FormularioSubida from "@/componentes/FormularioSubida";
 import { db } from "@/lib/supabase";
 import { exigirUsuario } from "@/lib/sesion";
 
@@ -44,6 +45,29 @@ export default async function Consejo() {
           </p>
         </div>
       </header>
+
+      <section className="tarjeta" style={{ padding: 20 }}>
+        <h2 className="text-lg font-bold">Subir la transcripción del Consejo</h2>
+        <p className="mt-1 text-[var(--texto-suave)]">
+          El Consejo es de todo el grupo: sube aquí la transcripción y el agente la analiza con lo que
+          se habló entre todos.
+        </p>
+        <div className="mt-4">
+          <FormularioSubida
+            alumnos={[]}
+            soloConsejo
+            pendientes={(consejos ?? [])
+              .filter((c) => c.estado !== "realizada")
+              .map((c) => ({
+                id: c.id,
+                alumno_id: null,
+                fecha: c.fecha,
+                hora: c.hora,
+                tipo: "consejo",
+              }))}
+          />
+        </div>
+      </section>
 
       <FormularioConsejo />
 

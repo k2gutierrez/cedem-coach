@@ -37,10 +37,12 @@ export default function FormularioSubida({
   alumnos,
   pendientes = [],
   alumnoInicial,
+  soloConsejo = false,
 }: {
   alumnos: { id: string; nombre: string }[];
   pendientes?: { id: string; alumno_id: string | null; fecha: string; hora: string | null; tipo: string }[];
   alumnoInicial?: string;
+  soloConsejo?: boolean;
 }) {
   const router = useRouter();
   const [archivo, setArchivo] = useAtom(archivoAtom);
@@ -48,7 +50,7 @@ export default function FormularioSubida({
   const [avance, setAvance] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [encima, setEncima] = useState(false);
-  const [alumnoId, setAlumnoId] = useState(alumnoInicial ?? "");
+  const [alumnoId, setAlumnoId] = useState(soloConsejo ? "__consejo" : (alumnoInicial ?? ""));
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
   const [sesionElegida, setSesionElegida] = useState("");
   const entrada = useRef<HTMLInputElement>(null);
@@ -203,7 +205,7 @@ export default function FormularioSubida({
   const terminar = (id?: string | null) => {
     setFase("listo");
     toast.success("Sesión guardada. El agente la está analizando…");
-    router.push(id ? `/alumnos/${id}?nueva=1` : "/");
+    router.push(soloConsejo ? "/consejos" : id ? `/alumnos/${id}?nueva=1` : "/");
   };
 
   const trabajando = fase === "enviando" || fase === "subiendo" || fase === "analizando" || fase === "listo";
@@ -211,6 +213,7 @@ export default function FormularioSubida({
   return (
     <form onSubmit={enviar} className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
+        {!soloConsejo && (
         <div className="campo">
           <label htmlFor="alumnoId">¿De qué alumno es la sesión?</label>
           <select
@@ -230,6 +233,7 @@ export default function FormularioSubida({
             ))}
           </select>
         </div>
+        )}
 
         {suyas.length > 0 ? (
           <div className="campo">
