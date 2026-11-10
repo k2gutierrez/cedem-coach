@@ -10,6 +10,7 @@ import type { Rol } from "@/lib/sesion";
 const ENLACES = [
   { href: "/", texto: "Inicio", icono: "⌂" },
   { href: "/alumnos", texto: "Alumnos", icono: "☺" },
+  { href: "/consejos", texto: "Consejo", icono: "▤" },
   { href: "/subir", texto: "Subir sesión", icono: "↑" },
   { href: "/monday", texto: "Monday", icono: "▦" },
   { href: "/chat", texto: "Agente", icono: "✦" },
