@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { analizarGuardada } from "@/lib/ingesta";
 import { usuarioActual } from "@/lib/sesion";
+import { limitar } from "@/lib/limites";
 
 export const maxDuration = 60;
 
@@ -8,6 +9,14 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const usuario = await usuarioActual();
   if (!usuario) return NextResponse.json({ error: "Tu sesión venció." }, { status: 401 });
+
+  const cupo = await limitar(`analisis:${usuario.id}`, 20, 60);
+  if (!cupo.ok) {
+    return NextResponse.json(
+      { error: `Demasiados análisis en una hora. Intenta en ${cupo.minutos} minutos.` },
+      { status: 429 }
+    );
+  }
 
   try {
     const { sesionId } = (await req.json()) as { sesionId?: string };

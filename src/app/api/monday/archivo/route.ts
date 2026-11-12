@@ -21,10 +21,9 @@ export async function GET(req: Request) {
   const permitido = url.protocol === "https:" && /(^|\.)monday\.com$/i.test(url.hostname);
   if (!permitido) return NextResponse.json({ error: "Esa liga no es de monday." }, { status: 400 });
 
-  const r = await fetch(url, {
-    headers: process.env.MONDAY_API_TOKEN ? { Authorization: process.env.MONDAY_API_TOKEN } : {},
-    cache: "no-store",
-  });
+  // La liga de monday ya viene firmada: no hace falta mandar el token, y así
+  // no se expone si alguien intenta apuntar a otra dirección suya.
+  const r = await fetch(url, { cache: "no-store" });
 
   if (!r.ok || !r.body) {
     return NextResponse.json({ error: `monday no entregó el archivo (${r.status}).` }, { status: 502 });

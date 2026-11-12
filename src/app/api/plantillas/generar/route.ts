@@ -2,12 +2,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { usuarioActual } from "@/lib/sesion";
 import { generarDesdePlantilla, plantillaPorId } from "@/lib/plantillas";
+import { limitar } from "@/lib/limites";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const usuario = await usuarioActual();
   if (!usuario) return NextResponse.json({ error: "Tu sesión venció." }, { status: 401 });
+
+  const cupo = await limitar(`plantillas:${usuario.id}`, 20, 60);
+  if (!cupo.ok) {
+    return NextResponse.json(
+      { error: `Llegaste al límite de documentos por hora. Intenta en ${cupo.minutos} minutos.` },
+      { status: 429 }
+    );
+  }
 
   const { plantillaId, alumnoId } = (await req.json().catch(() => ({}))) as {
     plantillaId?: string;

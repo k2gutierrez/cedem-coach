@@ -7,6 +7,7 @@ import { analizarSesion } from "./lib/agente";
 import { ErrorIngesta, extraer } from "./lib/extraer";
 import { tareasDelMes } from "./lib/datos";
 import { cerrarSesion, exigirAdmin, exigirUsuario, iniciarSesion } from "./lib/sesion";
+import { limitar } from "./lib/limites";
 
 export type Estado = { error?: string; ok?: string };
 

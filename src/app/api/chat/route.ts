@@ -4,6 +4,7 @@ import { usuarioActual } from "@/lib/sesion";
 import { tareasConCobertura } from "@/lib/datos";
 import { fragmentosDeTranscripcion } from "@/lib/retrieval";
 import { iaConfigurada, modeloTexto, URL_CHAT } from "@/lib/ia";
+import { limitar } from "@/lib/limites";
 
 export const maxDuration = 60;
 
@@ -149,6 +150,14 @@ export async function POST(req: Request) {
   if (!usuario) return NextResponse.json({ error: "sin_sesion" }, { status: 401 });
   if (!iaConfigurada()) {
     return NextResponse.json({ error: "falta_llave_ia" }, { status: 500 });
+  }
+
+  const cupo = await limitar(`chat:${usuario.id}`, 60, 60);
+  if (!cupo.ok) {
+    return NextResponse.json(
+      { error: `Llegaste al límite de mensajes por hora. Intenta en ${cupo.minutos} minutos.` },
+      { status: 429 }
+    );
   }
 
   const cuerpo = (await req.json()) as { mensajes?: Mensaje[]; alumnoId?: string | null };
