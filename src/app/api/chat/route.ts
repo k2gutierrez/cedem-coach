@@ -156,6 +156,15 @@ export async function POST(req: Request) {
   if (!mensajes.length) return NextResponse.json({ error: "sin_pregunta" }, { status: 400 });
 
   const alumnoId = cuerpo.alumnoId || null;
+
+  // El expediente solo se consulta si el alumno es del coach (o si es admin).
+  if (alumnoId) {
+    const { data: alumno } = await db.from("alumnos").select("coach_id").eq("id", alumnoId).maybeSingle();
+    if (!alumno) return NextResponse.json({ error: "alumno_inexistente" }, { status: 404 });
+    if (usuario.rol !== "admin" && alumno.coach_id !== usuario.id) {
+      return NextResponse.json({ error: "sin_permiso" }, { status: 403 });
+    }
+  }
   const ultima = [...mensajes].reverse().find((m) => m.rol === "user")?.texto || "";
 
   // Contexto: alumnos del coach, últimas sesiones y material de la firma.
