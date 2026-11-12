@@ -6,6 +6,8 @@ import Chat from "@/componentes/Chat";
 import AnalizadorPendiente from "@/componentes/AnalizadorPendiente";
 import FormularioAgenda from "@/componentes/FormularioAgenda";
 import BriefInvestigacion from "@/componentes/BriefInvestigacion";
+import GeneradorDocumento from "@/componentes/GeneradorDocumento";
+import { listarPlantillas } from "@/lib/plantillas";
 import FormularioAlumnoEdicion from "@/componentes/FormularioAlumnoEdicion";
 import { alumnoPorId, historialChat, sesionesDetalle, tareasConCobertura } from "@/lib/datos";
 import { usuarioDePagina } from "@/lib/sesion";
@@ -24,10 +26,11 @@ export default async function FichaAlumno({
   const alumno = await alumnoPorId(id, usuario);
   if (!alumno) notFound();
 
-  const [sesiones, tareas, historial] = await Promise.all([
+  const [sesiones, tareas, historial, plantillas] = await Promise.all([
     sesionesDetalle(alumno.id),
     tareasConCobertura(alumno.id),
     historialChat(alumno.id),
+    listarPlantillas(),
   ]);
   const realizadas = sesiones.filter((s) => s.estado === "realizada" || s.resumen_ejecutivo);
 
@@ -90,6 +93,10 @@ export default async function FichaAlumno({
         <div className="tarjeta" style={{ borderColor: "#9bd6a8", background: "#f0fbf3", color: "#14532d" }}>
           <strong>Sesión guardada.</strong> El agente la está analizando aquí abajo.
         </div>
+      )}
+
+      {plantillas.length > 0 && (
+        <GeneradorDocumento alumnoId={alumno.id} plantillas={plantillas.map((p) => ({ id: p.id, nombre: p.nombre }))} />
       )}
 
       <BriefInvestigacion

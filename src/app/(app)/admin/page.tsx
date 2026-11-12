@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import FormularioMaterial from "@/componentes/FormularioMaterial";
 import FormularioTarea from "@/componentes/FormularioTarea";
@@ -30,6 +31,17 @@ export default async function Administracion() {
           Editor de Supabase y recarga esta página.
         </div>
       )}
+
+      <section className="tarjeta" style={{ padding: 26 }}>
+        <h2 className="text-xl font-bold">Plantillas del agente</h2>
+        <p className="mb-4 mt-1 text-[var(--texto-suave)]">
+          Documentos que el equipo puede generar con un clic a partir del expediente de un alumno:
+          resúmenes ejecutivos, fichas, guiones para la junta.
+        </p>
+        <Link href="/admin/plantillas" className="btn btn-primario">
+          Administrar plantillas
+        </Link>
+      </section>
 
       <section className="tarjeta" style={{ padding: 26 }}>
         <h2 className="text-xl font-bold">Material de la firma</h2>

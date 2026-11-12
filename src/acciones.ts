@@ -519,3 +519,57 @@ export async function agendarConsejo(_prev: Estado, formData: FormData): Promise
     return { error: "No se pudo agendar el Consejo." };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Plantillas del agente (solo admin)
+// ---------------------------------------------------------------------------
+
+export type EstadoPlantilla = { error?: string; ok?: string };
+
+export async function crearPlantilla(
+  _estado: EstadoPlantilla,
+  formData: FormData
+): Promise<EstadoPlantilla> {
+  try {
+    const usuario = await exigirAdmin();
+    const nombre = String(formData.get("nombre") || "").trim();
+    const instrucciones = String(formData.get("instrucciones") || "").trim();
+    if (!nombre) return { error: "Ponle nombre a la plantilla." };
+    if (instrucciones.length < 40) {
+      return { error: "Escribe las instrucciones: qué debe contener el documento." };
+    }
+
+    const { error } = await db.from("plantillas").insert({
+      nombre,
+      descripcion: String(formData.get("descripcion") || "").trim() || null,
+      instrucciones,
+      creado_por: usuario.id,
+    });
+
+    if (error) return { error: `No se pudo guardar: ${error.message}` };
+
+    revalidatePath("/admin/plantillas");
+    return { ok: "Plantilla guardada." };
+  } catch {
+    return { error: "No se pudo guardar la plantilla." };
+  }
+}
+
+export async function eliminarPlantilla(formData: FormData): Promise<void> {
+  const usuario = await exigirAdmin();
+  if (!usuario) return;
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  await db.from("plantillas").delete().eq("id", id);
+  revalidatePath("/admin/plantillas");
+}
+
+export async function alternarPlantilla(formData: FormData): Promise<void> {
+  const usuario = await exigirAdmin();
+  if (!usuario) return;
+  const id = String(formData.get("id") || "");
+  const activo = String(formData.get("activo") || "") === "true";
+  if (!id) return;
+  await db.from("plantillas").update({ activo: !activo }).eq("id", id);
+  revalidatePath("/admin/plantillas");
+}

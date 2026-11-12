@@ -766,3 +766,81 @@ export async function briefPDF({
 
   return pdf.save();
 }
+
+/** Convierte texto plano (con saltos y guiones) en un PDF presentable. */
+export async function textoPDF(titulo: string, texto: string): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const normal = await pdf.embedFont(StandardFonts.Helvetica);
+  const negrita = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await pdf.embedPng(Buffer.from(LOGO_MIEEF, "base64"));
+
+  const ancho = 595.28;
+  const alto = 841.89;
+  const margen = 56;
+  const util = ancho - margen * 2;
+
+  let pagina = pdf.addPage([ancho, alto]);
+  let y = alto - margen;
+  let numero = 1;
+
+  const pie = () => {
+    pagina.drawText("Documento generado · CEDEM", { x: margen, y: 28, size: 8, font: normal, color: rgb(0.33, 0.38, 0.48) });
+    pagina.drawText(String(numero), { x: ancho - margen - 8, y: 28, size: 9, font: negrita, color: rgb(0.33, 0.38, 0.48) });
+  };
+
+  const nueva = () => {
+    pie();
+    pagina = pdf.addPage([ancho, alto]);
+    numero += 1;
+    y = alto - margen;
+  };
+
+  const escribir = (linea: string, opciones: { size?: number; font?: typeof normal; color?: ReturnType<typeof rgb>; sangria?: number } = {}) => {
+    const { size = 10.5, font = normal, color = rgb(0.09, 0.13, 0.18), sangria = 0 } = opciones;
+    const palabras = aWinAnsi(linea).split(/\s+/).filter(Boolean);
+    let actual = "";
+    const interlinea = size * 1.45;
+
+    for (const palabra of palabras) {
+      const prueba = actual ? `${actual} ${palabra}` : palabra;
+      if (font.widthOfTextAtSize(prueba, size) > util - sangria && actual) {
+        if (y - interlinea < 60) nueva();
+        pagina.drawText(actual, { x: margen + sangria, y, size, font, color });
+        y -= interlinea;
+        actual = palabra;
+      } else {
+        actual = prueba;
+      }
+    }
+    if (actual) {
+      if (y - interlinea < 60) nueva();
+      pagina.drawText(actual, { x: margen + sangria, y, size, font, color });
+      y -= interlinea;
+    }
+  };
+
+  // Encabezado con el logotipo
+  pagina.drawImage(logo, { x: margen, y: alto - margen - 6, width: 90, height: (90 * 177) / 400 });
+  y = alto - margen - 40;
+
+  escribir(titulo, { size: 17, font: negrita, color: rgb(0.043, 0.184, 0.42) });
+  y -= 8;
+
+  for (const bloque of texto.split("\n")) {
+    const linea = bloque.trimEnd();
+    if (!linea.trim()) {
+      y -= 8;
+      continue;
+    }
+
+    const esTitulo = /^(#+|\d+[.)]\s|[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]{6,}:?$)/.test(linea.trim());
+    escribir(linea.replace(/^#+\s*/, ""), {
+      font: esTitulo ? negrita : normal,
+      size: esTitulo ? 11.5 : 10.5,
+      color: esTitulo ? rgb(0.043, 0.184, 0.42) : rgb(0.09, 0.13, 0.18),
+    });
+  }
+
+  pie();
+  return pdf.save();
+}
