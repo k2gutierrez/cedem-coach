@@ -51,7 +51,10 @@ export async function crearAlumno(_prev: Estado, formData: FormData): Promise<Es
       usuario.rol === "admin" ? String(formData.get("coachId") || usuario.id) : usuario.id,
   });
 
-  if (error) return { error: `No se pudo guardar: ${error.message}` };
+  if (error) {
+    console.error("[acciones] guardar:", error);
+    return { error: "No se pudo guardar. Intenta de nuevo." };
+  }
 
   revalidatePath("/alumnos");
   revalidatePath("/");
@@ -132,7 +135,10 @@ export async function subirSesion(_prev: Estado, formData: FormData): Promise<Es
     if (previa?.id) {
       sesionId = previa.id;
       const { error } = await db.from("sesiones").update(datos).eq("id", sesionId);
-      if (error) return { error: `No se pudo guardar la sesión: ${error.message}` };
+      if (error) {
+        console.error("[acciones] guardar:", error);
+        return { error: "No se pudo guardar la sesión. Intenta de nuevo." };
+      }
       await db.from("hallazgos").delete().eq("sesion_id", sesionId);
       await db.from("compromisos").delete().eq("sesion_id", sesionId);
       await db.from("tarea_sesion").delete().eq("sesion_id", sesionId);
@@ -245,7 +251,7 @@ export async function subirMaterial(_prev: Estado, formData: FormData): Promise<
       return {
         error: falta
           ? "Falta crear la tabla de material: corre sql/002-material.sql en Supabase."
-          : `No se pudo guardar: ${error.message}`,
+          : "No se pudo guardar. Intenta de nuevo.",
       };
     }
 
@@ -279,7 +285,10 @@ export async function crearTarea(_prev: Estado, formData: FormData): Promise<Est
       mes,
     });
 
-    if (error) return { error: `No se pudo guardar: ${error.message}` };
+    if (error) {
+      console.error("[acciones] guardar:", error);
+      return { error: "No se pudo guardar. Intenta de nuevo." };
+    }
     revalidatePath("/admin");
     return { ok: "Tarea agregada al catálogo." };
   } catch {
@@ -361,7 +370,10 @@ export async function actualizarCuenta(_prev: Estado, formData: FormData): Promi
       .update({ nombre, zoom_url: zoom || null })
       .eq("id", usuario.id);
 
-    if (error) return { error: `No se pudo guardar: ${error.message}` };
+    if (error) {
+      console.error("[acciones] guardar:", error);
+      return { error: "No se pudo guardar. Intenta de nuevo." };
+    }
 
     if (clave) {
       const { error: errorClave } = await db.auth.admin.updateUserById(usuario.id, { password: clave });
@@ -403,7 +415,10 @@ export async function editarAlumno(_prev: Estado, formData: FormData): Promise<E
       })
       .eq("id", id);
 
-    if (error) return { error: `No se pudo guardar: ${error.message}` };
+    if (error) {
+      console.error("[acciones] guardar:", error);
+      return { error: "No se pudo guardar. Intenta de nuevo." };
+    }
     revalidatePath(`/alumnos/${id}`);
     revalidatePath("/alumnos");
     return { ok: "Datos del alumno actualizados." };
@@ -422,7 +437,10 @@ export async function bajaAlumno(_prev: Estado, formData: FormData): Promise<Est
     if (!id) return { error: "Falta el alumno." };
 
     const { error } = await db.from("alumnos").update({ activo: volver }).eq("id", id);
-    if (error) return { error: `No se pudo actualizar: ${error.message}` };
+    if (error) {
+      console.error("[acciones] guardar:", error);
+      return { error: "No se pudo actualizar. Intenta de nuevo." };
+    }
 
     revalidatePath("/alumnos");
     revalidatePath(`/alumnos/${id}`);
@@ -456,7 +474,10 @@ export async function actualizarSesion(_prev: Estado, formData: FormData): Promi
       .update({ fecha, hora, duracion_min: duracion })
       .eq("id", id);
 
-    if (error) return { error: `No se pudo actualizar: ${error.message}` };
+    if (error) {
+      console.error("[acciones] guardar:", error);
+      return { error: "No se pudo actualizar. Intenta de nuevo." };
+    }
 
     revalidatePath("/");
     if (alumnoId) revalidatePath(`/alumnos/${alumnoId}`);
@@ -477,7 +498,10 @@ export async function eliminarSesion(_prev: Estado, formData: FormData): Promise
     if (usuario.rol !== "admin" && sesion.coach_id !== usuario.id) return { error: "Esa sesión no es tuya." };
 
     const { error } = await db.from("sesiones").delete().eq("id", id);
-    if (error) return { error: `No se pudo eliminar: ${error.message}` };
+    if (error) {
+      console.error("[acciones] guardar:", error);
+      return { error: "No se pudo eliminar. Intenta de nuevo." };
+    }
 
     revalidatePath("/");
     if (alumnoId) revalidatePath(`/alumnos/${alumnoId}`);
@@ -512,7 +536,10 @@ export async function agendarConsejo(_prev: Estado, formData: FormData): Promise
       zoom_url: usuario.zoom_url,
     });
 
-    if (error) return { error: `No se pudo agendar: ${error.message}` };
+    if (error) {
+      console.error("[acciones] guardar:", error);
+      return { error: "No se pudo agendar. Intenta de nuevo." };
+    }
 
     revalidatePath("/");
     return { ok: "Consejo agendado." };
@@ -547,7 +574,10 @@ export async function crearPlantilla(
       creado_por: usuario.id,
     });
 
-    if (error) return { error: `No se pudo guardar: ${error.message}` };
+    if (error) {
+      console.error("[acciones] guardar:", error);
+      return { error: "No se pudo guardar. Intenta de nuevo." };
+    }
 
     revalidatePath("/admin/plantillas");
     return { ok: "Plantilla guardada." };
@@ -557,7 +587,7 @@ export async function crearPlantilla(
 }
 
 export async function eliminarPlantilla(formData: FormData): Promise<void> {
-  const usuario = await exigirAdmin();
+  const usuario = await exigirAdmin().catch(() => null);
   if (!usuario) return;
   const id = String(formData.get("id") || "");
   if (!id) return;
@@ -566,11 +596,28 @@ export async function eliminarPlantilla(formData: FormData): Promise<void> {
 }
 
 export async function alternarPlantilla(formData: FormData): Promise<void> {
-  const usuario = await exigirAdmin();
+  const usuario = await exigirAdmin().catch(() => null);
   if (!usuario) return;
   const id = String(formData.get("id") || "");
   const activo = String(formData.get("activo") || "") === "true";
   if (!id) return;
   await db.from("plantillas").update({ activo: !activo }).eq("id", id);
   revalidatePath("/admin/plantillas");
+}
+
+/** Cambia la firma de la liga de calendario: la anterior deja de funcionar. */
+export async function regenerarCalendario(): Promise<void> {
+  const usuario = await exigirUsuario();
+  const { data } = await db
+    .from("coaches")
+    .select("calendario_version")
+    .eq("id", usuario.id)
+    .maybeSingle();
+
+  await db
+    .from("coaches")
+    .update({ calendario_version: (data?.calendario_version ?? 0) + 1 })
+    .eq("id", usuario.id);
+
+  revalidatePath("/cuenta");
 }

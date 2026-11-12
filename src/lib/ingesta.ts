@@ -125,7 +125,10 @@ export async function guardarArchivo({
 
   if (previa?.id) {
     const { error } = await db.from("sesiones").update(datos).eq("id", previa.id);
-    if (error) return { ok: false, error: `No se pudo guardar: ${error.message}`, codigo: "guardado" };
+    if (error) {
+      console.error("[ingesta] guardar:", error);
+      return { ok: false, error: "No se pudo guardar. Intenta de nuevo.", codigo: "guardado" };
+    }
     return { ok: true, sesionId: previa.id, alumnoId: esConsejo ? null : alumnoId, caracteres: leido.caracteres };
   }
 

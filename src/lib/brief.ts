@@ -227,7 +227,10 @@ Escribe el brief ahora.`,
     .update({ brief: limpio, brief_fuentes: fuentesExtra, brief_actualizado: new Date().toISOString() })
     .eq("id", alumnoId);
 
-  if (error) return { ok: false, error: `No se pudo guardar: ${error.message}` };
+  if (error) {
+    console.error("[brief] guardar:", error);
+    return { ok: false, error: "No se pudo guardar. Intenta de nuevo." };
+  }
 
   return { ok: true, brief: { texto: limpio, fuentes: fuentesExtra } };
 }

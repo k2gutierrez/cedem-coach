@@ -211,5 +211,9 @@ export async function extraer(buffer: Buffer, nombre: string, mime: string): Pro
     );
   }
 
-  return { texto, tipo: clase, caracteres: texto.length, meta };
+  // Tope de seguridad: un documento comprimido puede inflarse mucho.
+  const LIMITE_TEXTO = 2_000_000;
+  const recortado = texto.length > LIMITE_TEXTO ? texto.slice(0, LIMITE_TEXTO) : texto;
+
+  return { texto: recortado, tipo: clase, caracteres: recortado.length, meta };
 }

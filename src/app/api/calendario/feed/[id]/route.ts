@@ -11,15 +11,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const token = new URL(_req.url).searchParams.get("t") || "";
 
-  if (!tokenValido(id, token)) {
-    return NextResponse.json({ error: "no_existe" }, { status: 404 });
-  }
-
   const { data: coach } = await db
     .from("coaches")
-    .select("id, nombre, email, activo")
+    .select("id, nombre, email, activo, calendario_version")
     .eq("id", id)
     .maybeSingle();
+
+  if (!tokenValido(id, token, coach?.calendario_version ?? 0)) {
+    return NextResponse.json({ error: "no_existe" }, { status: 404 });
+  }
 
   if (!coach || coach.activo === false) {
     return NextResponse.json({ error: "no_existe" }, { status: 404 });

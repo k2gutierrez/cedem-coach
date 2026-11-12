@@ -14,6 +14,7 @@ export type Usuario = {
   email: string;
   rol: Rol;
   zoom_url: string | null;
+  calendario_version?: number;
 };
 
 /** Entra con correo y contraseña contra Supabase Auth. */
@@ -60,7 +61,7 @@ export const usuarioActual = cache(async (): Promise<Usuario | null> => {
 
     const { data: perfil } = await db
       .from("coaches")
-      .select("id, nombre, email, rol, zoom_url, activo")
+      .select("id, nombre, email, rol, zoom_url, activo, calendario_version")
       .eq("id", data.user.id)
       .maybeSingle();
 

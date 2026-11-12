@@ -54,7 +54,10 @@ export async function POST(req: Request) {
     { onConflict: "tarea_id,sesion_id" }
   );
 
-  if (error) return NextResponse.json({ error: `No se pudo guardar: ${error.message}` }, { status: 500 });
+  if (error) {
+    console.error("[route] guardar:", error);
+    return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

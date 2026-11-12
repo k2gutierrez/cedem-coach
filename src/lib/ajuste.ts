@@ -145,7 +145,10 @@ export async function ajustarMinuta(sesionId: string): Promise<{ ok: true; minut
   }
 
   const { error } = await db.from("sesiones").update({ minuta_ajustada: ajustada }).eq("id", sesionId);
-  if (error) return { ok: false, error: `No se pudo guardar: ${error.message}` };
+  if (error) {
+    console.error("[ajuste] guardar:", error);
+    return { ok: false, error: "No se pudo guardar. Intenta de nuevo." };
+  }
 
   return { ok: true, minuta: ajustada };
 }
