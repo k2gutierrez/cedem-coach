@@ -8,6 +8,7 @@ import { exigirUsuario } from "@/lib/sesion";
 
 type Consejo = {
   id: string;
+  coaches?: { nombre?: string } | null;
   fecha: string;
   hora: string | null;
   duracion_min: number;
@@ -21,10 +22,10 @@ export default async function Consejo() {
 
   let consulta = db
     .from("sesiones")
-    .select("id, fecha, hora, duracion_min, estado, resumen_ejecutivo, nota_coach")
+    .select("id, fecha, hora, duracion_min, estado, resumen_ejecutivo, nota_coach, coaches(nombre)")
     .eq("tipo", "consejo")
     .order("fecha", { ascending: false })
-    .limit(20);
+    .limit(120);
 
   if (usuario.rol !== "admin") consulta = consulta.eq("coach_id", usuario.id);
 
@@ -78,7 +79,10 @@ export default async function Consejo() {
           {consejos.map((c) => (
             <li key={c.id} className="tarjeta">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <strong className="text-lg">{c.fecha} · Consejo</strong>
+                <strong className="text-lg">
+                  {c.fecha} · Consejo
+                  {usuario.rol === "admin" && c.coaches?.nombre ? ` · ${c.coaches.nombre}` : ""}
+                </strong>
                 <span className="etiqueta" style={{ background: "#e8f4fb", color: "#0b4d70" }}>
                   {c.estado === "realizada" ? "Realizado" : "Agendado"}
                 </span>
@@ -101,7 +105,7 @@ export default async function Consejo() {
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <a href={`/api/calendario/${c.id}`} className="btn btn-suave" style={{ minHeight: 46 }} download>
-                  + Calendario
+                  ↓ Agregar a mi calendario (.ics)
                 </a>
                 <a
                   href={`/api/documentos/${c.id}/minuta`}

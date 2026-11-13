@@ -216,7 +216,7 @@ export default async function FichaAlumno({
                       style={{ minHeight: 46, fontSize: "0.95rem" }}
                       download
                     >
-                      + Calendario
+                      ↓ Agregar a mi calendario (.ics)
                     </a>
                     {lista && (
                       <>

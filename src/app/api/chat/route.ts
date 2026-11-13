@@ -188,6 +188,21 @@ export async function POST(req: Request) {
   if (usuario.rol !== "admin") consultaSesiones = consultaSesiones.eq("coach_id", usuario.id);
   if (alumnoId) consultaSesiones = consultaSesiones.eq("alumno_id", alumnoId);
 
+  const { data: consejos } = await (usuario.rol === "admin"
+    ? db
+        .from("sesiones")
+        .select("fecha, hora, estado, coaches(nombre)")
+        .eq("tipo", "consejo")
+        .order("fecha", { ascending: true })
+        .limit(80)
+    : db
+        .from("sesiones")
+        .select("fecha, hora, estado, coaches(nombre)")
+        .eq("tipo", "consejo")
+        .eq("coach_id", usuario.id)
+        .order("fecha", { ascending: true })
+        .limit(30));
+
   const [{ data: alumnos }, { data: sesiones }, material] = await Promise.all([
     consultaAlumnos,
     consultaSesiones,
@@ -250,6 +265,17 @@ export async function POST(req: Request) {
       }
       return partes.join("\n");
     }),
+    "",
+    "",
+    "CONSEJOS AGENDADOS Y REALIZADOS (por fecha):",
+    ...((consejos ?? []).length
+      ? (consejos ?? []).map(
+          (c) =>
+            `- ${c.fecha}${c.hora ? ` ${String(c.hora).slice(0, 5)}` : ""} · ${
+              (c.coaches as unknown as { nombre?: string } | null)?.nombre ?? "sin coach"
+            } · ${c.estado === "realizada" ? "realizado" : "agendado"}`
+        )
+      : ["(sin consejos registrados)"]),
     "",
     "MATERIAL DE LA FIRMA (fragmentos relevantes):",
     ...(material.length
