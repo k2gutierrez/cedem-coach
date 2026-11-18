@@ -36,8 +36,8 @@ export default function FormularioTarea() {
           <input id="asignatura-tarea" name="asignatura" placeholder="Estrategia" />
         </div>
         <div className="campo">
-          <label htmlFor="mes">Mes</label>
-          <input id="mes" name="mes" type="month" />
+          <label htmlFor="fecha">Fecha</label>
+          <input id="fecha" name="fecha" type="date" />
         </div>
       </div>
 

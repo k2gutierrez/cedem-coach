@@ -115,15 +115,15 @@ export async function panelDe(u: Usuario) {
 }
 
 export async function tareasDelMes(): Promise<Tarea[]> {
-  const inicio = new Date();
-  inicio.setDate(1);
-  const mes = inicio.toISOString().slice(0, 10);
+  const hoy = new Date();
+  const inicio = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 1));
+  const fin = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 1));
 
   const { data } = await db
     .from("tareas")
     .select("id, titulo, asignatura, mes")
-    .or(`mes.eq.${mes},mes.is.null`)
-    .order("creado_en", { ascending: false });
+    .or(`and(mes.gte.${inicio.toISOString().slice(0, 10)},mes.lt.${fin.toISOString().slice(0, 10)}),mes.is.null`)
+    .order("mes", { ascending: false });
 
   return (data as Tarea[]) ?? [];
 }

@@ -231,20 +231,27 @@ export async function subirMaterial(_prev: Estado, formData: FormData): Promise<
     const buffer = Buffer.from(await archivo.arrayBuffer());
     const leido = await extraer(buffer, archivo.name, archivo.type);
 
-    const { data, error } = await db
+    const campos = {
+      titulo,
+      tipo,
+      asignatura: String(formData.get("asignatura") || "").trim() || null,
+      generacion: String(formData.get("generacion") || "").trim() || null,
+      autor: String(formData.get("autor") || "").trim() || null,
+      texto: leido.texto,
+      caracteres: leido.caracteres,
+      creado_por: usuario.id,
+    };
+
+    // Si ya hay un material con ese título, se reemplaza en lugar de duplicarlo.
+    const { data: previo } = await db
       .from("material")
-      .insert({
-        titulo,
-        tipo,
-        asignatura: String(formData.get("asignatura") || "").trim() || null,
-        generacion: String(formData.get("generacion") || "").trim() || null,
-        autor: String(formData.get("autor") || "").trim() || null,
-        texto: leido.texto,
-        caracteres: leido.caracteres,
-        creado_por: usuario.id,
-      })
       .select("id")
-      .single();
+      .eq("titulo", titulo)
+      .maybeSingle();
+
+    const { data, error } = previo
+      ? await db.from("material").update(campos).eq("id", previo.id).select("id").single()
+      : await db.from("material").insert(campos).select("id").single();
 
     if (error) {
       const falta = error.code === "42P01" || error.code === "PGRST205";
@@ -257,13 +264,18 @@ export async function subirMaterial(_prev: Estado, formData: FormData): Promise<
 
     const partes = trocear(leido.texto);
     if (partes.length) {
+      await db.from("material_fragmentos").delete().eq("material_id", data.id);
       await db.from("material_fragmentos").insert(
         partes.map((texto, orden) => ({ material_id: data.id, orden, texto }))
       );
     }
 
     revalidatePath("/admin");
-    return { ok: `"${titulo}" quedó cargado (${partes.length} fragmentos).` };
+    return {
+      ok: previo
+        ? `"${titulo}" se actualizó (${partes.length} fragmentos). El anterior quedó reemplazado.`
+        : `"${titulo}" quedó cargado (${partes.length} fragmentos).`,
+    };
   } catch (e) {
     if (e instanceof ErrorIngesta) return { error: e.message };
     return { error: `Algo falló: ${(e as Error).message}` };
@@ -276,8 +288,8 @@ export async function crearTarea(_prev: Estado, formData: FormData): Promise<Est
     const titulo = String(formData.get("titulo") || "").trim();
     if (titulo.length < 3) return { error: "Escribe el nombre de la tarea." };
 
-    const mesCrudo = String(formData.get("mes") || "");
-    const mes = mesCrudo ? `${mesCrudo}-01` : null;
+    const mesCrudo = String(formData.get("fecha") || formData.get("mes") || "");
+    const mes = mesCrudo ? (mesCrudo.length === 7 ? `${mesCrudo}-01` : mesCrudo) : null;
 
     const { error } = await db.from("tareas").insert({
       titulo,
@@ -620,4 +632,14 @@ export async function regenerarCalendario(): Promise<void> {
     .eq("id", usuario.id);
 
   revalidatePath("/cuenta");
+}
+
+/** Quita un material y sus fragmentos (solo admin). */
+export async function eliminarMaterial(formData: FormData): Promise<void> {
+  const usuario = await exigirAdmin().catch(() => null);
+  if (!usuario) return;
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  await db.from("material").delete().eq("id", id);
+  revalidatePath("/admin");
 }

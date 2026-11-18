@@ -188,6 +188,12 @@ export async function POST(req: Request) {
   if (usuario.rol !== "admin") consultaSesiones = consultaSesiones.eq("coach_id", usuario.id);
   if (alumnoId) consultaSesiones = consultaSesiones.eq("alumno_id", alumnoId);
 
+  const { data: tareasAplicacion } = await db
+    .from("tareas")
+    .select("titulo, asignatura, mes")
+    .order("mes", { ascending: false })
+    .limit(40);
+
   const { data: consejos } = await (usuario.rol === "admin"
     ? db
         .from("sesiones")
@@ -266,6 +272,14 @@ export async function POST(req: Request) {
       return partes.join("\n");
     }),
     "",
+    "",
+    "TAREAS DE APLICACIÓN DEL PROGRAMA:",
+    ...((tareasAplicacion ?? []).length
+      ? (tareasAplicacion ?? []).map(
+          (t) =>
+            `- ${t.titulo}${t.asignatura ? ` · ${t.asignatura}` : ""}${t.mes ? ` · ${String(t.mes).slice(0, 10)}` : ""}`
+        )
+      : ["(sin tareas registradas)"]),
     "",
     "CONSEJOS AGENDADOS Y REALIZADOS (por fecha):",
     ...((consejos ?? []).length

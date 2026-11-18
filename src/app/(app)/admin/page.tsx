@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import FormularioMaterial from "@/componentes/FormularioMaterial";
 import FormularioTarea from "@/componentes/FormularioTarea";
+import { eliminarMaterial } from "@/acciones";
 import { listarMaterial, tareasDelMes } from "@/lib/datos";
 import { db } from "@/lib/supabase";
 import { usuarioDePagina } from "@/lib/sesion";
@@ -81,8 +82,16 @@ export default async function Administracion() {
             {items.map((m) => (
               <li key={m.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--borde)] pb-2 last:border-0">
                 <span className="font-semibold">{m.titulo}</span>
-                <span className="text-sm text-[var(--texto-suave)]">
-                  {[m.tipo, m.asignatura, m.generacion].filter(Boolean).join(" · ")}
+                <span className="flex items-center gap-3">
+                  <span className="text-sm text-[var(--texto-suave)]">
+                    {[m.tipo, m.asignatura, m.generacion].filter(Boolean).join(" · ")}
+                  </span>
+                  <form action={eliminarMaterial}>
+                    <input type="hidden" name="id" value={m.id} />
+                    <button type="submit" className="text-sm underline" style={{ color: "#a32217" }}>
+                      Eliminar
+                    </button>
+                  </form>
                 </span>
               </li>
             ))}
