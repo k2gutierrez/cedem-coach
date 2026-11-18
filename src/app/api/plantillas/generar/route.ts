@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { usuarioActual } from "@/lib/sesion";
 import { generarDesdePlantilla, plantillaPorId } from "@/lib/plantillas";
+import { buscarMaterial } from "@/lib/material";
 import { limitar } from "@/lib/limites";
 
 export const maxDuration = 30;
@@ -61,6 +62,9 @@ export async function POST(req: Request) {
     .eq("id", alumno.coach_id)
     .maybeSingle();
 
+  const consulta = [plantilla.nombre, plantilla.descripcion, alumno.reto, alumno.giro].filter(Boolean).join(" ");
+  const material = await buscarMaterial(consulta || plantilla.nombre);
+
   const r = await generarDesdePlantilla(plantilla, {
     alumno: alumno.nombre,
     empresa: alumno.empresa,
@@ -77,6 +81,7 @@ export async function POST(req: Request) {
     compromisos: (compromisos ?? []).map((c) => c.texto),
     tareas: (tareas ?? []).map((t) => t.titulo),
     brief: alumno.brief,
+    material,
   });
 
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 502 });

@@ -1,5 +1,6 @@
 import { db } from "./supabase";
 import { completarTexto } from "./ia";
+import { buscarMaterial } from "./material";
 
 export type Plantilla = {
   id: string;
@@ -49,6 +50,7 @@ export async function generarDesdePlantilla(
     compromisos: string[];
     tareas: string[];
     brief?: string | null;
+    material?: { titulo: string; tipo: string; fragmento: string }[];
   }
 ): Promise<{ ok: true; texto: string } | { ok: false; error: string }> {
   const sistema = `Eres el asistente de CEDEM, una firma mexicana de consultoría para empresas familiares.
@@ -57,6 +59,7 @@ Trabajas para el equipo de la firma, no para el alumno.
 Reglas:
 - Usa únicamente la información del expediente que se te entrega.
 - Si un dato no aparece, no lo inventes: escribe "sin información" o desarrolla el punto sin ese dato.
+- Si el material de la firma aporta al documento, úsalo y nómbralo.
 - No expliques lo que haces ni pidas confirmación: entrega el documento listo para copiar.`;
 
   const usuario = `INSTRUCCIONES DEL DOCUMENTO
@@ -82,6 +85,9 @@ ${contexto.tareas.length ? contexto.tareas.map((t) => `- ${t}`).join("\n") : "si
 
 BRIEF DE CONTEXTO
 ${contexto.brief ? contexto.brief.slice(0, 4000) : "sin brief"}
+
+MATERIAL DE LA FIRMA (usa lo que aplique; si no aplica, ignóralo)
+${contexto.material?.length ? contexto.material.map((m) => `- [${m.tipo}] ${m.titulo}: ${m.fragmento}`).join("\n") : "sin material relacionado"}
 
 Escribe el documento ahora, siguiendo la estructura de las instrucciones.`;
 
