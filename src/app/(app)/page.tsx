@@ -52,7 +52,7 @@ export default async function Inicio() {
         <>
           <section className="flex flex-wrap gap-3">
             <Link href="/subir" className="btn btn-primario btn-grande">
-              ↑ Subir transcripción
+              ↑ Subir sesión coaching
             </Link>
             <Link href="/alumnos" className="btn btn-suave btn-grande">
               ☺ Ver mis alumnos

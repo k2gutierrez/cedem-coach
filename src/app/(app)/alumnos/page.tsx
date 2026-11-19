@@ -20,7 +20,7 @@ export default async function Alumnos() {
           </p>
         </div>
         <Link href="/subir" className="btn btn-suave">
-          ↑ Subir transcripción
+          ↑ Subir sesión coaching
         </Link>
       </header>
 

@@ -40,7 +40,7 @@ export default async function Consejo() {
           <p className="mt-1 text-[var(--texto-suave)]">
             Sesiones con todos los alumnos del grupo. Sube su transcripción desde{" "}
             <Link href="/subir" className="underline">
-              Subir sesión
+              Subir sesión coaching
             </Link>{" "}
             eligiendo “Consejo”.
           </p>

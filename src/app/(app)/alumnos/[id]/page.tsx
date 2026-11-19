@@ -60,7 +60,7 @@ export default async function FichaAlumno({
 
         <div className="flex flex-wrap gap-2">
           <Link href={`/subir?alumno=${alumno.id}`} className="btn btn-primario">
-            ↑ Subir transcripción
+            ↑ Subir sesión coaching
           </Link>
           {realizadas.length > 0 && (
             <details className="relative">
