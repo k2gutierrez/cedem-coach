@@ -1,9 +1,59 @@
 import { db } from "./supabase";
+import { embeddingDe } from "./embeddings";
 
 export type FragmentoMaterial = { titulo: string; tipo: string; fragmento: string };
 
+type Fila = { titulo: string; tipo: string; fragmento: string };
+
+/** Búsqueda semántica: fragmentos parecidos por significado, no por palabra. */
+async function buscarPorVector(consulta: string, limite: number): Promise<Fila[]> {
+  try {
+    const vector = await embeddingDe(consulta);
+    if (!vector) return [];
+
+    const { data, error } = await db.rpc("buscar_fragmentos_vector", {
+      consulta_vector: JSON.stringify(vector),
+      limite,
+    });
+
+    if (error || !Array.isArray(data)) return [];
+
+    return (data as { texto: string; titulo: string; tipo: string; distancia: number }[])
+      .filter((f) => f.distancia < 0.62)
+      .map((f) => ({ titulo: f.titulo, tipo: f.tipo, fragmento: f.texto }));
+  } catch {
+    return [];
+  }
+}
+
+/** Junta los resultados de texto y de vectores, sin repetir. */
+function combinar(a: Fila[], b: Fila[], limite: number): Fila[] {
+  const vistos = new Set<string>();
+  const salida: Fila[] = [];
+  for (const fila of [...a, ...b]) {
+    const clave = `${fila.titulo}|${fila.fragmento.slice(0, 80)}`;
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    salida.push(fila);
+    if (salida.length >= limite) break;
+  }
+  return salida;
+}
+
 /** Busca en el material de la firma los fragmentos que responden a una consulta. */
-export async function buscarMaterial(consulta: string): Promise<{ titulo: string; tipo: string; fragmento: string }[]> {
+export async function buscarMaterial(consulta: string): Promise<Fila[]> {
+  const [porTexto, porVector] = await Promise.all([
+    buscarPorTexto(consulta),
+    buscarPorVector(consulta, 8),
+  ]);
+
+  // El significado primero; el texto completa.
+  const juntos = combinar(porVector, porTexto, 10);
+  if (juntos.length) return juntos;
+  return porTexto;
+}
+
+async function buscarPorTexto(consulta: string): Promise<Fila[]> {
   try {
     const { data, error } = await db.rpc("buscar_material", { consulta, limite: 10 });
     if (!error && Array.isArray(data) && data.length) {

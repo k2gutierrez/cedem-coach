@@ -8,6 +8,7 @@ import { ErrorIngesta, extraer } from "./lib/extraer";
 import { tareasDelMes } from "./lib/datos";
 import { cerrarSesion, exigirAdmin, exigirUsuario, iniciarSesion } from "./lib/sesion";
 import { limitar } from "./lib/limites";
+import { generarEmbeddings } from "./lib/embeddings";
 
 export type Estado = { error?: string; ok?: string };
 
@@ -265,9 +266,26 @@ export async function subirMaterial(_prev: Estado, formData: FormData): Promise<
     const partes = trocear(leido.texto);
     if (partes.length) {
       await db.from("material_fragmentos").delete().eq("material_id", data.id);
-      await db.from("material_fragmentos").insert(
-        partes.map((texto, orden) => ({ material_id: data.id, orden, texto }))
-      );
+      const { data: insertados } = await db
+        .from("material_fragmentos")
+        .insert(partes.map((texto, orden) => ({ material_id: data.id, orden, texto })))
+        .select("id, texto");
+
+      // Vectores para la búsqueda semántica. Si falla, la búsqueda por texto
+      // sigue funcionando igual.
+      try {
+        const filas = insertados ?? [];
+        const vectores = await generarEmbeddings(filas.map((f) => f.texto));
+        if (vectores.length === filas.length) {
+          await Promise.all(
+            filas.map((f, i) =>
+              db.from("material_fragmentos").update({ embedding: vectores[i] }).eq("id", f.id)
+            )
+          );
+        }
+      } catch (e) {
+        console.error("[material] no se pudieron generar los vectores:", e);
+      }
     }
 
     revalidatePath("/admin");
