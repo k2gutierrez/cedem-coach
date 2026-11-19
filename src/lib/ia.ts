@@ -13,6 +13,14 @@ export function modeloTexto() {
   return process.env.OPENAI_MODELO_TEXTO || "gpt-4o-mini";
 }
 
+/**
+ * El chat es donde más importa seguir instrucciones (no mezclar coaches, citar).
+ * Se puede subir de modelo sin tocar el resto.
+ */
+export function modeloChat() {
+  return process.env.OPENAI_MODELO_CHAT || "gpt-4.1-mini";
+}
+
 export function iaConfigurada() {
   return Boolean(process.env.OPENAI_API_KEY);
 }

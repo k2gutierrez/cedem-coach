@@ -5,7 +5,7 @@ export type FragmentoMaterial = { titulo: string; tipo: string; fragmento: strin
 /** Busca en el material de la firma los fragmentos que responden a una consulta. */
 export async function buscarMaterial(consulta: string): Promise<{ titulo: string; tipo: string; fragmento: string }[]> {
   try {
-    const { data, error } = await db.rpc("buscar_material", { consulta, limite: 6 });
+    const { data, error } = await db.rpc("buscar_material", { consulta, limite: 10 });
     if (!error && Array.isArray(data) && data.length) {
       return data as { titulo: string; tipo: string; fragmento: string }[];
     }
@@ -35,7 +35,7 @@ export async function buscarMaterial(consulta: string): Promise<{ titulo: string
     .from("material_fragmentos")
     .select("texto, material:material_id(titulo, tipo)")
     .textSearch("tsv", palabras.join(" or "), { config: "spanish", type: "websearch" })
-    .limit(6);
+    .limit(10);
 
   if (!error && porTexto?.length) return mapear(porTexto);
 
@@ -43,7 +43,7 @@ export async function buscarMaterial(consulta: string): Promise<{ titulo: string
     .from("material_fragmentos")
     .select("texto, material:material_id(titulo, tipo)")
     .or(palabras.map((p) => `texto.ilike.%${p}%`).join(","))
-    .limit(6);
+    .limit(10);
 
   return mapear(data ?? []);
 }

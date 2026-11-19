@@ -3,7 +3,7 @@ import { db } from "@/lib/supabase";
 import { usuarioActual } from "@/lib/sesion";
 import { tareasConCobertura } from "@/lib/datos";
 import { fragmentosDeTranscripcion } from "@/lib/retrieval";
-import { iaConfigurada, modeloTexto, URL_CHAT } from "@/lib/ia";
+import { iaConfigurada, modeloChat, URL_CHAT } from "@/lib/ia";
 import { limitar } from "@/lib/limites";
 import { buscarMaterial } from "@/lib/material";
 
@@ -22,6 +22,14 @@ Reglas:
   transcripciones que van en el contexto y cítalos. Si el dato no aparece ahí, di que no lo
   encontraste en lo consultado; nunca digas que el texto "está truncado".
 - No inventes datos de alumnos ni cifras.
+- Nunca mezcles coaches. Si la pregunta menciona a un coach, responde SOLO con lo de ese coach.
+  Si el contexto trae datos de varios, filtra y dilo: "de Dalila: …".
+- Para preguntas sobre Consejos usa el bloque CONSEJOS: ahí viene la fecha, el coach y, si ya se
+  analizó, el resumen de lo que se habló. Cita la fecha del Consejo.
+- Para preguntas sobre tareas de aplicación usa el catálogo TAREAS DE APLICACIÓN; es la fuente
+  oficial. El material puede repetirlas o traerlas desactualizadas: si hay conflicto, gana el catálogo.
+- Si el material disponible tiene relación con la pregunta, úsalo y nómbralo aunque la pregunta sea
+  general; si no hay fragmentos, revisa el ÍNDICE DE MATERIAL y di qué documento habría que abrir.
 - Cuando te pregunten qué hacer, propón 2 o 3 acciones concretas y deja la decisión al coach.
 - Si el coach te corrige o te da información nueva del caso, acéptala y tenla en cuenta en lo que
   sigue de la conversación; en la app sus correcciones se aplican a la minuta con un botón.
@@ -152,16 +160,22 @@ export async function POST(req: Request) {
     .order("mes", { ascending: false })
     .limit(40);
 
+  const { data: materialIndice } = await db
+    .from("material")
+    .select("titulo, tipo")
+    .order("creado_en", { ascending: false })
+    .limit(30);
+
   const { data: consejos } = await (usuario.rol === "admin"
     ? db
         .from("sesiones")
-        .select("fecha, hora, estado, coaches(nombre)")
+        .select("fecha, hora, estado, resumen_ejecutivo, nota_coach, minuta_ajustada, coaches(nombre)")
         .eq("tipo", "consejo")
         .order("fecha", { ascending: true })
         .limit(80)
     : db
         .from("sesiones")
-        .select("fecha, hora, estado, coaches(nombre)")
+        .select("fecha, hora, estado, resumen_ejecutivo, nota_coach, minuta_ajustada, coaches(nombre)")
         .eq("tipo", "consejo")
         .eq("coach_id", usuario.id)
         .order("fecha", { ascending: true })
@@ -241,17 +255,24 @@ export async function POST(req: Request) {
     "",
     "CONSEJOS AGENDADOS Y REALIZADOS (por fecha):",
     ...((consejos ?? []).length
-      ? (consejos ?? []).map(
-          (c) =>
-            `- ${c.fecha}${c.hora ? ` ${String(c.hora).slice(0, 5)}` : ""} · ${
-              (c.coaches as unknown as { nombre?: string } | null)?.nombre ?? "sin coach"
-            } · ${c.estado === "realizada" ? "realizado" : "agendado"}`
-        )
+      ? (consejos ?? []).map((c) => {
+          const ajuste = (c.minuta_ajustada ?? null) as { resumen?: string } | null;
+          const quien = (c.coaches as unknown as { nombre?: string } | null)?.nombre ?? "sin coach";
+          const resumen = ajuste?.resumen || c.resumen_ejecutivo;
+          return `- ${c.fecha}${c.hora ? ` ${String(c.hora).slice(0, 5)}` : ""} · ${quien} · ${
+            c.estado === "realizada" ? "realizado" : "agendado"
+          }${resumen ? `: ${recortar(resumen, 320)}` : " (sin resumen todavía)"}`;
+        })
       : ["(sin consejos registrados)"]),
+    "",
+    "ÍNDICE DE MATERIAL DE LA FIRMA (lo que existe, aunque no se haya recuperado):",
+    ...((materialIndice ?? []).length
+      ? (materialIndice ?? []).map((m) => `- [${m.tipo}] ${m.titulo}`)
+      : ["(sin material cargado)"]),
     "",
     "MATERIAL DE LA FIRMA (fragmentos relevantes):",
     ...(material.length
-      ? material.map((m) => `- [${m.tipo}] ${m.titulo}: ${recortar(m.fragmento, 700)}`)
+      ? material.map((m) => `- [${m.tipo}] ${m.titulo}: ${recortar(m.fragmento, 1100)}`)
       : ["(sin resultados para esta pregunta)"]),
   ];
 
@@ -346,7 +367,7 @@ export async function POST(req: Request) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: modeloTexto(),
+      model: modeloChat(),
       temperature: 0.3,
       stream: true,
       messages: [
