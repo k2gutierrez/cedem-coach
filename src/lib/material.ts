@@ -19,7 +19,7 @@ async function buscarPorVector(consulta: string, limite: number): Promise<Fila[]
     if (error || !Array.isArray(data)) return [];
 
     return (data as { texto: string; titulo: string; tipo: string; distancia: number }[])
-      .filter((f) => f.distancia < 0.62)
+      .filter((f) => f.distancia < 0.78)
       .map((f) => ({ titulo: f.titulo, tipo: f.tipo, fragmento: f.texto }));
   } catch {
     return [];
