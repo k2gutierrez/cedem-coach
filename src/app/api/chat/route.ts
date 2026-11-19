@@ -22,6 +22,10 @@ Reglas:
   transcripciones que van en el contexto y cítalos. Si el dato no aparece ahí, di que no lo
   encontraste en lo consultado; nunca digas que el texto "está truncado".
 - No inventes datos de alumnos ni cifras.
+- Cada alumno pertenece a UN coach, y el contexto lo dice en cada línea ("coach: …"). Si preguntan
+  "qué alumnos tiene cada coach", agrupa por coach; si preguntan por uno, filtra ese coach.
+- Que quien pregunte sea admin no significa que los alumnos sean suyos: el admin ve a todos, pero
+  cada alumno sigue siendo de su coach. No digas que un alumno "está asignado" a quien pregunta.
 - Nunca mezcles coaches. Si la pregunta menciona a un coach, responde SOLO con lo de ese coach.
   Si el contexto trae datos de varios, filtra y dilo: "de Dalila: …".
 - Para preguntas sobre Consejos usa el bloque CONSEJOS: ahí viene la fecha, el coach y, si ya se
@@ -143,7 +147,7 @@ export async function POST(req: Request) {
   const ultima = [...mensajes].reverse().find((m) => m.rol === "user")?.texto || "";
 
   // Contexto: alumnos del coach, últimas sesiones y material de la firma.
-  let consultaAlumnos = db.from("alumnos").select("nombre, empresa, reto").eq("activo", true).limit(20);
+  let consultaAlumnos = db.from("alumnos").select("nombre, empresa, reto, coaches(nombre)").eq("activo", true).limit(80);
   if (usuario.rol !== "admin") consultaAlumnos = consultaAlumnos.eq("coach_id", usuario.id);
 
   let consultaSesiones = db
@@ -159,6 +163,10 @@ export async function POST(req: Request) {
     .select("titulo, asignatura, mes")
     .order("mes", { ascending: false })
     .limit(40);
+
+  const { data: equipo } = await (usuario.rol === "admin"
+    ? db.from("coaches").select("nombre, rol, activo").eq("activo", true).order("nombre")
+    : Promise.resolve({ data: null }));
 
   const { data: materialIndice } = await db
     .from("material")
@@ -220,7 +228,12 @@ export async function POST(req: Request) {
     `COACH: ${usuario.nombre} (${usuario.rol})`,
     "",
     "SUS ALUMNOS:",
-    ...(alumnos ?? []).map((a) => `- ${a.nombre}${a.empresa ? ` · ${a.empresa}` : ""}${a.reto ? ` · proyecto: ${a.reto}` : ""}`),
+    ...(alumnos ?? []).map((a) => {
+      const coach = (a.coaches as unknown as { nombre?: string } | null)?.nombre;
+      return `- ${a.nombre}${a.empresa ? ` · ${a.empresa}` : ""}${a.reto ? ` · proyecto: ${a.reto}` : ""}${
+        coach ? ` · coach: ${coach}` : " · sin coach asignado"
+      }`;
+    }),
     "",
     alumnoId ? "SESIONES DE ESTE ALUMNO:" : "SESIONES RECIENTES:",
     ...(sesiones ?? []).map((s) => {
@@ -244,6 +257,16 @@ export async function POST(req: Request) {
       return partes.join("\n");
     }),
     "",
+    "",
+    "EQUIPO (cada alumno pertenece a uno de estos coaches):",
+    ...((equipo ?? []).length
+      ? (equipo ?? []).map((c) => {
+          const cuantos = (alumnos ?? []).filter(
+            (a) => (a.coaches as unknown as { nombre?: string } | null)?.nombre === c.nombre
+          ).length;
+          return `- ${c.nombre} (${c.rol}) · ${cuantos} alumnos`;
+        })
+      : ["(sin equipo cargado)"]),
     "",
     "TAREAS DE APLICACIÓN DEL PROGRAMA:",
     ...((tareasAplicacion ?? []).length
