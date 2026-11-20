@@ -96,3 +96,38 @@ Escribe el documento ahora, siguiendo la estructura de las instrucciones.`;
 
   return { ok: true, texto: r.texto };
 }
+
+/**
+ * Documento de la firma: no parte de un alumno, sino del material cargado
+ * (clases, metodología, documentos). Solo lo usa la coordinación.
+ */
+export async function generarDocumentoFirma(
+  plantilla: Plantilla,
+  tema: string,
+  material: { titulo: string; tipo: string; fragmento: string }[]
+): Promise<{ ok: true; texto: string } | { ok: false; error: string }> {
+  const sistema = `Eres el asistente de CEDEM, una firma mexicana de consultoría para empresas familiares.
+Escribes en español de México, con tono profesional y directo.
+Trabajas para la coordinación de la firma.
+Reglas:
+- Usa únicamente el material que se te entrega; no inventes datos, cifras ni fuentes.
+- Si el material no alcanza para un punto, dilo en una línea en lugar de rellenar.
+- Cita el documento de donde sale cada bloque, con su título.
+- No expliques lo que haces ni pidas confirmación: entrega el documento listo para copiar.`;
+
+  const usuario = `INSTRUCCIONES DEL DOCUMENTO
+${plantilla.instrucciones}
+
+TEMA SOLICITADO
+${tema || "todo el material disponible"}
+
+MATERIAL DE LA FIRMA
+${material.length ? material.map((m) => `### [${m.tipo}] ${m.titulo}\n${m.fragmento}`).join("\n\n") : "sin material cargado"}
+
+Escribe el documento ahora, siguiendo la estructura de las instrucciones.`;
+
+  const r = await completarTexto({ sistema, usuario, maxTokens: 3500, temperatura: 0.3 });
+  if (!r.ok) return { ok: false, error: r.error };
+
+  return { ok: true, texto: r.texto };
+}

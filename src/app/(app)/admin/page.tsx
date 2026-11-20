@@ -39,9 +39,14 @@ export default async function Administracion() {
           Documentos que el equipo puede generar con un clic a partir del expediente de un alumno:
           resúmenes ejecutivos, fichas, guiones para la junta.
         </p>
-        <Link href="/admin/plantillas" className="btn btn-primario">
-          Administrar plantillas
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/plantillas" className="btn btn-primario">
+            Administrar plantillas
+          </Link>
+          <Link href="/admin/documentos" className="btn btn-suave">
+            Generar documento de la firma
+          </Link>
+        </div>
       </section>
 
       <section className="tarjeta" style={{ padding: 26 }}>
